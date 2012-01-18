@@ -1,1 +1,1 @@
-This project will contain implementations for exercises found in Andrew Appel's [Modern Compiler Implementation in Java](http://www.cs.princeton.edu/~appel/modern/java/) written with a little TDD discipline.
+This project will contain implementations for exercises found in Andrew Appel's [Modern Compiler Implementation in Java](http://www.cs.princeton.edu/~appel/modern/java/) written with a little TDD discipline. CI can be found on [CloudBees](https://jlee.ci.cloudbees.com/job/appel-exercises/).
