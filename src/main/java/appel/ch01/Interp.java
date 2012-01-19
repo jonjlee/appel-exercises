@@ -66,8 +66,7 @@ public class Interp {
   /** Helper for interp that processes all subclasses of Stm */
   private Table interpStm(Stm s, Table t) {
     if (s instanceof PrintStm) {
-      print(((PrintStm) s).exps, t);
-      return t;
+      return print(((PrintStm) s).exps, t);
     } else if (s instanceof AssignStm) {
       AssignStm assignStm = (AssignStm) s;
       IntAndTable expVal = interpExp(assignStm.exp, t);
@@ -119,13 +118,16 @@ public class Interp {
     return lookup(t.tail, id);
   }
 
-  private void print(ExpList exps, Table t) {
+  private Table print(ExpList exps, Table t) {
     if (exps instanceof LastExpList) {
-      print(interpExp(((LastExpList) exps).head, t));
+      IntAndTable expVal = interpExp(((LastExpList) exps).head, t);
+      print(expVal);
+      return expVal.t;
     } else {
       PairExpList pairExpList = (PairExpList) exps;
-      print(interpExp(pairExpList.head, t));
-      print(pairExpList.tail, t);
+      IntAndTable expVal = interpExp(pairExpList.head, t);
+      print(expVal);
+      return print(pairExpList.tail, expVal.t);
     }
   }
 

@@ -18,7 +18,7 @@ public class TestInterp {
   private NumExp zero = new NumExp(0);
   private NumExp one = new NumExp(1);
   private PrintStm simplePrintStm = print(zero);
-  static Stm prog = 
+  private Stm prog = 
       new CompoundStm(new AssignStm("a", new OpExp(new NumExp(5), OpExp.Plus, new NumExp(3))),  // a=5+3
       new CompoundStm(new AssignStm("b", new EseqExp(                                           // b=( print(a, a-1), 10*a )  
                           new PrintStm(new PairExpList(new IdExp("a"), new LastExpList(new OpExp(new IdExp("a"), OpExp.Minus, new NumExp(1))))),
@@ -26,6 +26,32 @@ public class TestInterp {
                       )),
                       new PrintStm(new LastExpList(new IdExp("b")))));                          // print(b)
                                                                                                 // --> 8780
+  private Stm complexProg = 
+      // x = 5                                               -->     ; x=5
+      // print(( print(x), x = x+5, print(x), y = x-1, y ))  --> 5109; x=10, y=9
+      // print(y)                                            --> 9   ;
+      // print( (5+( y = y+1, y )-12) * 10 / (1+1) )         --> 15  ; y=10 
+      // print(y)                                            --> 10
+      new CompoundStm(new AssignStm("x", new NumExp(5)), 
+      new CompoundStm(print(
+                        new EseqExp(print(new IdExp("x")),
+                        new EseqExp(new AssignStm("x", new OpExp(new IdExp("x"), OpExp.Plus, new NumExp(5))),
+                        new EseqExp(print(new IdExp("x")),
+                        new EseqExp(new AssignStm("y", new OpExp(new IdExp("x"), OpExp.Minus, new NumExp(1))),
+                                    new IdExp("y")))))),
+      new CompoundStm(print(new IdExp("y")),
+      new CompoundStm(print(
+                        new OpExp(
+                            new OpExp(
+                                new OpExp(
+                                    new OpExp(new NumExp(5), OpExp.Plus, new EseqExp(new AssignStm("y", new OpExp(new IdExp("y"), OpExp.Plus, new NumExp(1))), new IdExp("y"))),
+                                    OpExp.Minus,
+                                    new NumExp(12)),
+                                OpExp.Times,
+                                new NumExp(10)),
+                            OpExp.Div,
+                            new OpExp(one, OpExp.Plus, one))),
+                      print(new IdExp("y"))))));
   
   // numargs() tests
   @Test public void numargsWithOneArg() {
@@ -119,6 +145,10 @@ public class TestInterp {
   @Test public void interpProg() {
     interp.interp(prog);
     assertEquals(out.toString(), "8780");
+  }
+  @Test public void interpComplexProg() {
+    interp.interp(complexProg);
+    assertEquals(out.toString(), "510991510");
   }
 
   // helpers
