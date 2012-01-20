@@ -28,8 +28,9 @@ public class TestInterp {
       // x = 5                                               -->     ; x=5
       // print(( print(x), x = x+5, print(x), y = x-1, y ))  --> 5109; x=10, y=9
       // print(y)                                            --> 9   ;
-      // print( (5+( y = y+1, y )-12) * 10 / (1+1) )         --> 15  ; y=10 
-      // print(y)                                            --> 10
+      // print( (5+( y = y+1, y )-12) * 10 / (1+1) )         --> 15  ; y=10
+      // z = ( x = x+1, y=x+1, y+1)                          -->     ; x=11, y=12, z=13 
+      // print(x, y, z)                                      --> 111213
       new CompoundStm(new AssignStm("x", new NumExp(5)), 
       new CompoundStm(print(
                         new EseqExp(print(new IdExp("x")),
@@ -49,7 +50,11 @@ public class TestInterp {
                                 new NumExp(10)),
                             OpExp.Div,
                             new OpExp(one, OpExp.Plus, one))),
-                      print(new IdExp("y"))))));
+      new CompoundStm(new AssignStm("z", 
+                        new EseqExp(new AssignStm("x", new OpExp(new IdExp("x"), OpExp.Plus, one)),
+                        new EseqExp(new AssignStm("y", new OpExp(new IdExp("x"), OpExp.Plus, one)),
+                                    new OpExp(new IdExp("y"), OpExp.Plus, one)))),
+                      print(new IdExp("x"), new IdExp("y"), new IdExp("z")))))));
   
   // numargs() tests
   @Test public void numargsWithOneArg() {
@@ -144,7 +149,7 @@ public class TestInterp {
   }
   @Test public void interpComplexProg() {
     interp(complexProg);
-    assertEquals(out.toString(), "510991510");
+    assertEquals(out.toString(), "5109915111213");
   }
 
   // helpers
