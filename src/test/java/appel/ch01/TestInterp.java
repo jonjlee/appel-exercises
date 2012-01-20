@@ -1,14 +1,12 @@
 package appel.ch01;
 
 import static appel.ch01.Interp.explist;
+import static appel.ch01.Interp.interp;
 import static appel.ch01.Interp.maxargs;
 import static appel.ch01.Interp.numargs;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 import static org.testng.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -102,33 +100,32 @@ public class TestInterp {
   
   // interp() tests
   ByteArrayOutputStream out;
-  Interp interp;
+  Env env;
   @BeforeMethod public void setup() {
-    interp = spy(new Interp());
     out = new ByteArrayOutputStream();
-    doReturn(new PrintStream(out)).when(interp).getOutStream();
+    env = new Env(out);
   }
   @Test public void interpSimplePrint() {
-    interp.interp(print(zero));
+    interp(print(zero), env);
     assertEquals(out.toString(), "0");
   }
   @Test public void interpMultiArgPrint() {
-    interp.interp(print(zero, zero, zero));
+    interp(print(zero, zero, zero), env);
     assertEquals(out.toString(), "000");
   }
   @Test public void interpCompoundPrints() {
     Stm s = new CompoundStm(simplePrintStm, new CompoundStm(simplePrintStm, simplePrintStm));
-    interp.interp(s);
+    interp(s, env);
     assertEquals(out.toString(), "000");
   }
   @Test public void interpAssignment() {
     Stm s = new CompoundStm(new AssignStm("x", zero), print(new IdExp("x"), one));
-    interp.interp(s);
+    interp(s, env);
     assertEquals(out.toString(), "01");
   }
   @Test public void interpESeq() {
     Stm s = new CompoundStm(new AssignStm("x", one), print(new EseqExp(print(zero, zero), new IdExp("x"))));
-    interp.interp(s);
+    interp(s, env);
     assertEquals(out.toString(), "001");
   }
   @Test public void interpOpExp() {
@@ -139,15 +136,15 @@ public class TestInterp {
             new OpExp(new IdExp("x"), OpExp.Minus, one),
             new OpExp(new IdExp("x"), OpExp.Times, new NumExp(3)),
             new OpExp(new IdExp("x"), OpExp.Div, one)));
-    interp.interp(s);
+    interp(s, env);
     assertEquals(out.toString(), "2031");
   }
   @Test public void interpProg() {
-    interp.interp(prog);
+    interp(prog, env);
     assertEquals(out.toString(), "8780");
   }
   @Test public void interpComplexProg() {
-    interp.interp(complexProg);
+    interp(complexProg, env);
     assertEquals(out.toString(), "510991510");
   }
 

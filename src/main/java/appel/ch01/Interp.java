@@ -1,8 +1,13 @@
 package appel.ch01;
 
-import java.io.PrintStream;
 
 public class Interp {
+
+  private Env env;
+
+  public Interp(Env env) {
+    this.env = env;
+  }
 
   /** Return number of expressions in an ExpList */
   public static int numargs(ExpList exps) {
@@ -59,14 +64,17 @@ public class Interp {
   }
   
   /** "Interprets" an program given an AST composed of our limited node types */
-  public void interp(Stm s) {
-    interpStm(s, null);
+  public static void interp(Stm s) {
+    interp(s, new Env());
+  }
+  public static void interp(Stm s, Env env) {
+    new Interp(env).interpStm(s, null);
   }
   
   /** Helper for interp that processes all subclasses of Stm */
   private Table interpStm(Stm s, Table t) {
     if (s instanceof PrintStm) {
-      return print(((PrintStm) s).exps, t);
+      return interpPrint(((PrintStm) s).exps, t);
     } else if (s instanceof AssignStm) {
       AssignStm assignStm = (AssignStm) s;
       IntAndTable expVal = interpExp(assignStm.exp, t);
@@ -78,6 +86,20 @@ public class Interp {
       return stm2Ret;
     }
     return null;
+  }
+
+  /** Helper for interp that processes PrintStm instances */
+  private Table interpPrint(ExpList exps, Table t) {
+    if (exps instanceof LastExpList) {
+      IntAndTable expVal = interpExp(((LastExpList) exps).head, t);
+      env.out.print(expVal.i);
+      return expVal.t;
+    } else {
+      PairExpList pairExpList = (PairExpList) exps;
+      IntAndTable expVal = interpExp(pairExpList.head, t);
+      env.out.print(expVal.i);
+      return interpPrint(pairExpList.tail, expVal.t);
+    }
   }
 
   /** Helper for interp that processes all subclasses of Exp using a symbol table */
@@ -116,28 +138,6 @@ public class Interp {
       return t.value;
     }
     return lookup(t.tail, id);
-  }
-
-  private Table print(ExpList exps, Table t) {
-    if (exps instanceof LastExpList) {
-      IntAndTable expVal = interpExp(((LastExpList) exps).head, t);
-      print(expVal);
-      return expVal.t;
-    } else {
-      PairExpList pairExpList = (PairExpList) exps;
-      IntAndTable expVal = interpExp(pairExpList.head, t);
-      print(expVal);
-      return print(pairExpList.tail, expVal.t);
-    }
-  }
-
-  private void print(IntAndTable t) {
-    getOutStream().print(t.i);
-  }
-
-  /** Helper for interp that processes all subclasses of Exp */
-  public PrintStream getOutStream() {
-    return System.out;
   }
 }
 
