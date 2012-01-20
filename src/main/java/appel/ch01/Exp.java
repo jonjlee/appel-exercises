@@ -1,5 +1,5 @@
 package appel.ch01;
 
-public class Exp {
-
+public interface Exp {
+  IntAndTable eval(Table t);
 }

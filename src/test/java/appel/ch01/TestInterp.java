@@ -100,32 +100,31 @@ public class TestInterp {
   
   // interp() tests
   ByteArrayOutputStream out;
-  Env env;
   @BeforeMethod public void setup() {
     out = new ByteArrayOutputStream();
-    env = new Env(out);
+    Interp.setEnv(new Env(out));
   }
   @Test public void interpSimplePrint() {
-    interp(print(zero), env);
+    interp(print(zero));
     assertEquals(out.toString(), "0");
   }
   @Test public void interpMultiArgPrint() {
-    interp(print(zero, zero, zero), env);
+    interp(print(zero, zero, zero));
     assertEquals(out.toString(), "000");
   }
   @Test public void interpCompoundPrints() {
     Stm s = new CompoundStm(simplePrintStm, new CompoundStm(simplePrintStm, simplePrintStm));
-    interp(s, env);
+    interp(s);
     assertEquals(out.toString(), "000");
   }
   @Test public void interpAssignment() {
     Stm s = new CompoundStm(new AssignStm("x", zero), print(new IdExp("x"), one));
-    interp(s, env);
+    interp(s);
     assertEquals(out.toString(), "01");
   }
   @Test public void interpESeq() {
     Stm s = new CompoundStm(new AssignStm("x", one), print(new EseqExp(print(zero, zero), new IdExp("x"))));
-    interp(s, env);
+    interp(s);
     assertEquals(out.toString(), "001");
   }
   @Test public void interpOpExp() {
@@ -136,15 +135,15 @@ public class TestInterp {
             new OpExp(new IdExp("x"), OpExp.Minus, one),
             new OpExp(new IdExp("x"), OpExp.Times, new NumExp(3)),
             new OpExp(new IdExp("x"), OpExp.Div, one)));
-    interp(s, env);
+    interp(s);
     assertEquals(out.toString(), "2031");
   }
   @Test public void interpProg() {
-    interp(prog, env);
+    interp(prog);
     assertEquals(out.toString(), "8780");
   }
   @Test public void interpComplexProg() {
-    interp(complexProg, env);
+    interp(complexProg);
     assertEquals(out.toString(), "510991510");
   }
 

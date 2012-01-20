@@ -3,12 +3,6 @@ package appel.ch01;
 
 public class Interp {
 
-  private Env env;
-
-  public Interp(Env env) {
-    this.env = env;
-  }
-
   /** Return number of expressions in an ExpList */
   public static int numargs(ExpList exps) {
     if (exps instanceof LastExpList) {
@@ -63,85 +57,13 @@ public class Interp {
     return 0;
   }
   
+  /** The runtime environment, which currently just contains the output stream */
+  private static Env env = new Env();
+  public static Env getEnv() { return env; }
+  public static void setEnv(Env env) { Interp.env = env; }
+
   /** "Interprets" an program given an AST composed of our limited node types */
   public static void interp(Stm s) {
-    interp(s, new Env());
+    s.eval(null);
   }
-  public static void interp(Stm s, Env env) {
-    new Interp(env).interpStm(s, null);
-  }
-  
-  /** Helper for interp that processes all subclasses of Stm */
-  private Table interpStm(Stm s, Table t) {
-    if (s instanceof PrintStm) {
-      return interpPrint(((PrintStm) s).exps, t);
-    } else if (s instanceof AssignStm) {
-      AssignStm assignStm = (AssignStm) s;
-      IntAndTable expVal = interpExp(assignStm.exp, t);
-      return new Table(assignStm.id, expVal.i, expVal.t);
-    } else if (s instanceof CompoundStm) {
-      CompoundStm cs = (CompoundStm) s;
-      Table stm1Ret= interpStm(cs.stm1, t);
-      Table stm2Ret = interpStm(cs.stm2, stm1Ret);
-      return stm2Ret;
-    }
-    return null;
-  }
-
-  /** Helper for interp that processes PrintStm instances */
-  private Table interpPrint(ExpList exps, Table t) {
-    if (exps instanceof LastExpList) {
-      IntAndTable expVal = interpExp(((LastExpList) exps).head, t);
-      env.out.print(expVal.i);
-      return expVal.t;
-    } else {
-      PairExpList pairExpList = (PairExpList) exps;
-      IntAndTable expVal = interpExp(pairExpList.head, t);
-      env.out.print(expVal.i);
-      return interpPrint(pairExpList.tail, expVal.t);
-    }
-  }
-
-  /** Helper for interp that processes all subclasses of Exp using a symbol table */
-  private IntAndTable interpExp(Exp e, Table t) {
-    if (e instanceof NumExp) {
-      return new IntAndTable(((NumExp) e).num, t);
-    } else if (e instanceof IdExp) {
-      return new IntAndTable(lookup(t, ((IdExp) e).id), t);
-    } else if (e instanceof EseqExp) {
-      EseqExp eseqExp = (EseqExp) e;
-      Table stmRet = interpStm(eseqExp.stm, t);
-      IntAndTable expVal = interpExp(eseqExp.exp, stmRet);
-      return expVal;
-    } else if (e instanceof OpExp) {
-      OpExp opExp = (OpExp) e;
-      IntAndTable exp1Val = interpExp(opExp.left, t);
-      IntAndTable exp2Val = interpExp(opExp.right, exp1Val.t);
-      if (opExp.oper == OpExp.Plus) {
-        return new IntAndTable(exp1Val.i + exp2Val.i, exp2Val.t); 
-      } else if (opExp.oper == OpExp.Minus) {
-        return new IntAndTable(exp1Val.i - exp2Val.i, exp2Val.t); 
-      } else if (opExp.oper == OpExp.Times) {
-        return new IntAndTable(exp1Val.i * exp2Val.i, exp2Val.t); 
-      } else if (opExp.oper == OpExp.Div) {
-        return new IntAndTable(exp1Val.i / exp2Val.i, exp2Val.t); 
-      } 
-    }
-    throw new UnsupportedOperationException("Unsupported Exp type: " + e);
-  }
-
-  int lookup(Table t, String id) {
-    if (t == null) {
-      throw new IllegalArgumentException("Variable " + id + " not found in table");
-    }
-    if (t.id.equals(id)) {
-      return t.value;
-    }
-    return lookup(t.tail, id);
-  }
-}
-
-class IntAndTable {
-  int i; Table t;
-  public IntAndTable(int ii, Table tt) {i=ii; t=tt;}
 }

@@ -1,5 +1,5 @@
 package appel.ch01;
 
-public class Stm {
-
+public interface Stm {
+  Table eval(Table t);
 }
