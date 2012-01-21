@@ -57,11 +57,6 @@ public class Interp {
     return 0;
   }
   
-  /** The runtime environment, which currently just contains the output stream */
-  private static Env env = new Env();
-  public static Env getEnv() { return env; }
-  public static void setEnv(Env env) { Interp.env = env; }
-
   /** "Interprets" an program given an AST composed of our limited node types */
   public static void interp(Stm s) {
     s.eval(null);

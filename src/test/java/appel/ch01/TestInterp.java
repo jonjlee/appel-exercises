@@ -7,7 +7,9 @@ import static appel.ch01.Interp.numargs;
 import static org.testng.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -104,10 +106,12 @@ public class TestInterp {
   }
   
   // interp() tests
-  ByteArrayOutputStream out;
-  @BeforeMethod public void setup() {
-    out = new ByteArrayOutputStream();
-    Interp.setEnv(new Env(out));
+  ByteArrayOutputStream out = new ByteArrayOutputStream();
+  @BeforeClass public void replaceSystemOut() {
+    System.setOut(new PrintStream(out));
+  }
+  @BeforeMethod public void resetOutputStream() {
+    out.reset();
   }
   @Test public void interpSimplePrint() {
     interp(print(zero));

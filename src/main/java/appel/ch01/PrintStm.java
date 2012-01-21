@@ -11,17 +11,13 @@ public class PrintStm implements Stm {
   private Table interpPrint(ExpList exps, Table t) {
     if (exps instanceof LastExpList) {
       IntAndTable expVal = ((LastExpList) exps).head.eval(t);
-      print(expVal.i);
+      System.out.print(expVal.i);
       return expVal.t;
     } else {
       PairExpList pairExpList = (PairExpList) exps;
       IntAndTable expVal = pairExpList.head.eval(t);
-      print(expVal.i);
+      System.out.print(expVal.i);
       return interpPrint(pairExpList.tail, expVal.t);
     }
-  }
-
-  private void print(int i) {
-    Interp.getEnv().out.print(i);
   }
 }
