@@ -1,10 +1,7 @@
 package appel.ch01;
 
-import static appel.ch01.Interp.explist;
-import static appel.ch01.Interp.interp;
-import static appel.ch01.Interp.maxargs;
-import static appel.ch01.Interp.numargs;
-import static org.testng.Assert.assertEquals;
+import static appel.ch01.Interp.*;
+import static org.testng.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;

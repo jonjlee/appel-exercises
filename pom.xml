@@ -16,7 +16,7 @@
 	</scm>
 
 	<dependencies>
-  		<!-- Testing -->
+		<!-- Testing -->
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-all</artifactId>
@@ -41,6 +41,22 @@
 					<source>1.6</source>
 					<target>1.6</target>
 				</configuration>
+			</plugin>
+			<!-- Lexer/parser generator -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sablecc-maven-plugin</artifactId>
+				<configuration>
+					<outputDirectory>${basedir}/src/main/java</outputDirectory>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

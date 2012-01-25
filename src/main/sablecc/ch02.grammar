@@ -1,0 +1,76 @@
+Package appel.ch02;
+
+Helpers
+	any = [0..0xffff];
+	letter = [['a'..'z']+['A'..'Z']];
+	alpha = letter | '_';
+	digit = ['0'..'9'];
+	alphanum = alpha | digit;
+	decimal = ['1'..'9'] digit+;
+	exponent = ('e' | 'E') ('+' | '-')? decimal?;
+
+Tokens
+	comma = ',';
+	colon = ':';
+	semicolon = ';';
+	lparen = '(';
+	rparen = ')';
+	lbrack = '[';
+	rbrack = ']';
+	lbrace = '{';
+	rbrace = '}';
+	dot = '.';
+	plus = '+';
+	minus = '-';
+	times = '*';
+	divide = '/';
+	eq = '=';
+	neq = '!=';
+	lt = '<';
+	le = '<=';
+	gt = '>';
+	ge = '>=';
+	and = '&&';
+	or = '||';
+
+	if = 'if';
+	else = 'else';
+	while = 'while';
+	for = 'for';
+	do = 'do';
+	break = 'break';
+	new = 'new';
+	throw = 'throw';
+	try = 'try';
+	catch = 'catch';
+	finally = 'finally';
+	public = 'public';
+	protected = 'protected';
+	private = 'private';
+	class = 'class';
+	interface = 'interface';
+	extends = 'extends';
+	implements = 'implements';
+	instanceof = 'instanceof';
+	return = 'return';
+	println = 'System.out.println';
+
+	static = 'static';
+	int = 'int';
+	true = 'true';
+	false = 'false';
+	null = 'null';
+
+	decimal = decimal;
+	octal = '0' ['0'..'7']*;
+	hex = '0x' [['a'..'f']+['A'..'F']]+;
+	float = 
+		(digit+ '.' digit* exponent? ) | 
+		(digit* '.' digit+ exponent? ) |
+		(digit+ exponent?);
+	
+	id = alpha alphanum*;
+
+	whitespace = (' ' | '\t' | '\n')+;
+	linecomment = '//';
+	comment = ('/*' '*/');
