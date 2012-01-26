@@ -1,0 +1,105 @@
+Package appel.ch03;
+
+Helpers
+	any = [0..0xffff];
+	eol = (10 | 13 | 10 13);
+	letter = [['a'..'z']+['A'..'Z']];
+	alpha = letter | '_';
+	digit = ['0'..'9'];
+	alphanum = alpha | digit;
+	nonzero = ['1'..'9'] digit*;
+	star = '*';
+	nonstar = [any - star];
+	quote = '"';
+	nonquote = [any - quote];
+	exponent = ('e' | 'E') ('+' | '-')? nonzero?;
+	escapedchar = '\\' | '\' ''' | '\"' | '\t' | '\n';
+
+Tokens
+	comma = ',';
+	colon = ':';
+	semicolon = ';';
+	lparen = '(';
+	rparen = ')';
+	lbrack = '[';
+	rbrack = ']';
+	lbrace = '{';
+	rbrace = '}';
+	bang = '!';
+	dot = '.';
+	plus = '+';
+	minus = '-';
+	times = '*';
+	divide = '/';
+	mod = '%';
+	eq = '==';
+	neq = '!=';
+	lt = '<';
+	le = '<=';
+	gt = '>';
+	ge = '>=';
+	and = '&&';
+	or = '||';
+	assign = '=';
+	inc = '++';
+	dec = '--';
+	pluseq = '+=';
+	minuseq = '-=';
+	timeseq = '*=';
+	divideeq = '/=';
+	modeq = '%=';
+
+	if = 'if';
+	else = 'else';
+	for = 'for';
+	do = 'do';
+	while = 'while';
+	break = 'break';
+	new = 'new';
+	throw = 'throw';
+	try = 'try';
+	catch = 'catch';
+	finally = 'finally';
+	static = 'static';
+	public = 'public';
+	protected = 'protected';
+	private = 'private';
+	class = 'class';
+	interface = 'interface';
+	extends = 'extends';
+	implements = 'implements';
+	this = 'this';
+	instanceof = 'instanceof';
+	return = 'return';
+	println = 'System.out.println';
+	length = 'length';
+
+	void = 'void';
+	int = 'int';
+	boolean = 'boolean';
+	stringtype = 'String';
+	true = 'true';
+	false = 'false';
+	null = 'null';
+
+	decimal = '0' | nonzero;
+	octal = '0' ['0'..'7']*;
+	hex = '0x' [digit + [['a'..'f'] + ['A'..'F']]]+;
+	float = 
+		(digit+ '.' digit* exponent? ) | 
+		(digit* '.' digit+ exponent? ) |
+		(digit+ exponent);
+	
+	char = ''' (escapedchar | any) ''';
+	string = '"' nonquote* (escapedchar+ nonquote*)* '"';	
+	
+	id = alpha alphanum*;
+
+	whitespace = (' ' | '\t' | eol)+;
+	comment = 
+		('//' [any - [10 + 13]]* eol?) |
+		('/*' nonstar* (star+ [any - '/'] nonstar*)* star* '*/');
+
+Ignored Tokens
+	whitespace,
+	comment;
