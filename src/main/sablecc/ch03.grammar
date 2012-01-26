@@ -10,78 +10,32 @@ Helpers
 	nonzero = ['1'..'9'] digit*;
 	star = '*';
 	nonstar = [any - star];
-	quote = '"';
-	nonquote = [any - quote];
+	nonquote = [any - '"'];
 	exponent = ('e' | 'E') ('+' | '-')? nonzero?;
 	escapedchar = '\\' | '\' ''' | '\"' | '\t' | '\n';
 
 Tokens
-	comma = ',';
-	colon = ':';
-	semicolon = ';';
-	lparen = '(';
-	rparen = ')';
-	lbrack = '[';
-	rbrack = ']';
-	lbrace = '{';
-	rbrace = '}';
-	bang = '!';
-	dot = '.';
-	plus = '+';
-	minus = '-';
-	times = '*';
-	divide = '/';
-	mod = '%';
-	eq = '==';
-	neq = '!=';
-	lt = '<';
-	le = '<=';
-	gt = '>';
-	ge = '>=';
-	and = '&&';
-	or = '||';
-	assign = '=';
-	inc = '++';
-	dec = '--';
-	pluseq = '+=';
-	minuseq = '-=';
-	timeseq = '*=';
-	divideeq = '/=';
-	modeq = '%=';
+	// Symbols
+	comma = ','; colon = ':'; semicolon = ';'; bang = '!'; dot = '.';
+	lparen = '('; rparen = ')'; lbrack = '['; rbrack = ']'; lbrace = '{'; rbrace = '}';
+	plus = '+'; minus = '-'; times = '*'; divide = '/'; mod = '%';
+	pluseq = '+='; minuseq = '-='; timeseq = '*='; divideeq = '/='; modeq = '%=';
+	eqeq = '=='; neq = '!='; lt = '<'; le = '<='; gt = '>'; ge = '>=';
+	and = '&&'; or = '||'; eq = '=';
+	inc = '++'; dec = '--';
 
-	if = 'if';
-	else = 'else';
-	for = 'for';
-	do = 'do';
-	while = 'while';
-	break = 'break';
-	new = 'new';
-	throw = 'throw';
-	try = 'try';
-	catch = 'catch';
-	finally = 'finally';
-	static = 'static';
-	public = 'public';
-	protected = 'protected';
-	private = 'private';
-	class = 'class';
-	interface = 'interface';
-	extends = 'extends';
-	implements = 'implements';
-	this = 'this';
-	instanceof = 'instanceof';
-	return = 'return';
-	println = 'System.out.println';
-	length = 'length';
+	// Reserved
+	println = 'System.out.println'; length = 'length';
+	if = 'if'; else = 'else';
+	for = 'for'; do = 'do'; while = 'while'; break = 'break';
+	new = 'new'; throw = 'throw'; try = 'try'; catch = 'catch'; finally = 'finally';
+	static = 'static'; public = 'public'; protected = 'protected'; private = 'private';
+	classkeyword = 'class'; interface = 'interface'; extends = 'extends'; implements = 'implements';
+	this = 'this'; instanceof = 'instanceof';
+	return = 'return'; true = 'true'; false = 'false'; null = 'null';
+	void = 'void'; int = 'int'; boolean = 'boolean'; stringtype = 'String';
 
-	void = 'void';
-	int = 'int';
-	boolean = 'boolean';
-	stringtype = 'String';
-	true = 'true';
-	false = 'false';
-	null = 'null';
-
+	// Numbers
 	decimal = '0' | nonzero;
 	octal = '0' ['0'..'7']*;
 	hex = '0x' [digit + [['a'..'f'] + ['A'..'F']]]+;
@@ -90,11 +44,14 @@ Tokens
 		(digit* '.' digit+ exponent? ) |
 		(digit+ exponent);
 	
+	// Strings
 	char = ''' (escapedchar | any) ''';
 	string = '"' nonquote* (escapedchar+ nonquote*)* '"';	
 	
+	// Identifier
 	id = alpha alphanum*;
 
+	// Whitespace/comments
 	whitespace = (' ' | '\t' | eol)+;
 	comment = 
 		('//' [any - [10 + 13]]* eol?) |
@@ -103,3 +60,19 @@ Tokens
 Ignored Tokens
 	whitespace,
 	comment;
+
+Productions
+	// Top-level program (one .java file)
+	prog = class_or_interface_def1*;
+	type_mods = 
+		{public} public |
+		{protected} protected |
+		{private} private;
+	class_or_interface_def1 = type_mods static? class_or_interface_def2;
+	class_or_interface_def2 = 
+		{class} class_def | 
+		{interface} interface_def;
+	
+	// Classes and interfaces
+	interface_def = interface id lbrace rbrace;
+	class_def = classkeyword id lbrace rbrace;
