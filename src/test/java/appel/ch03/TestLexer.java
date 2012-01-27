@@ -32,7 +32,7 @@ public class TestLexer {
 	}
 	
 	public void numbers() {
-		testTokens("0 1 10", TDecimal.class, TDecimal.class, TDecimal.class);
+		testTokens("0 1 10", TInteger.class, TInteger.class, TInteger.class);
 		testTokens("01 07", TOctal.class, TOctal.class);
 		testTokens("0x0 0x0111 0xAF1", THex.class, THex.class, THex.class);
 		testTokens("1. 1.0 0.1 .1 .111 1.111", TFloat.class, TFloat.class, TFloat.class, TFloat.class, TFloat.class, TFloat.class);

@@ -35,7 +35,7 @@ Tokens
 	void = 'void'; int = 'int'; boolean = 'boolean'; stringtype = 'String';
 
 	// Numbers
-	decimal = '0' | nonzero;
+	integer = '0' | nonzero;
 	octal = '0' ['0'..'7']*;
 	hex = '0x' [digit + [['a'..'f'] + ['A'..'F']]]+;
 	float = 
@@ -69,11 +69,10 @@ Productions
 	
 	// Classes and interfaces
 	interface_def = interface id lbrace member_decl* rbrace;
-	class_def = classkeyword id lbrace rbrace;
+	class_def = classkeyword id lbrace member_def* rbrace;
 	
-	// Definitions and declarations
-	member_decl = type_spec direct_decl lparen opt_var_decl_list rparen semi;
-	var_decl = type_spec direct_decl;
+	// Declarations
+	member_decl = type_spec fun_direct_decl semi;
 	primitive_type = 
 		{void} void |
 		{int} int |
@@ -83,13 +82,53 @@ Productions
 		{primitive} primitive_type |
 		{object} id |
 		{array} type_spec lbrack rbrack;
+	param_decl = type_spec direct_decl;
 	direct_decl = 
-		id |
-		{array} direct_decl lbrack rbrack |
-		{fun} direct_decl lparen opt_var_decl_list rparen;
-	opt_var_decl_list =
-		|
-		{decl_list} var_decl_list; 
-	var_decl_list = 
-		var_decl |
-		{multi} var_decl_list comma var_decl; 
+		{var} var_direct_decl |
+		{fun} fun_direct_decl;
+	var_direct_decl =
+		{id} id |
+		{array} direct_decl lbrack rbrack;
+	fun_direct_decl =
+		{std} id lparen opt_param_decl_list rparen; 
+	opt_param_decl_list =
+		param_decl_list | 
+		{empty};
+	param_decl_list = 
+		{single} param_decl |
+		{multi} param_decl_list comma param_decl;
+
+	// Definitions 
+	member_def =
+		{var} var_defs |
+		{fun} fun_def |
+		{constructor} constructor_def;
+	var_defs = type_spec var_def_list semi;
+	var_def_list = 
+		{single} var_def |
+		{multi} var_def_list comma var_def;
+	var_def =
+		{no_init} var_direct_decl |
+		{with_init} var_direct_decl eq expr;
+	fun_def = type_spec fun_direct_decl lbrace stmt* rbrace;
+	constructor_def = fun_direct_decl lbrace stmt* rbrace;
+	
+	// Expressions
+	number = 
+		{int} integer |
+		{octal} octal |
+		{hex} hex |
+		{float} float;
+	expr = 
+		{null} null |
+		{true} true |
+		{false} false |
+		{number} number |
+		{char} char |
+		{string} string |
+		{id} id;
+
+	// Statements
+	stmt = 
+		{expr} expr semi |
+		{empty} semi;
