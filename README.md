@@ -1,1 +1,3 @@
-This project will contain implementations for exercises found in Andrew Appel's [Modern Compiler Implementation in Java](http://www.cs.princeton.edu/~appel/modern/java/) written with a little TDD discipline. CI can be found on [CloudBees](https://jlee.ci.cloudbees.com/job/appel-exercises/).
+This project will contain implementations for the fjava language from [Jason Hickey's CS134b class|http://main.metaprl.org/jyh/classes/cs134/cs134b/2002/] which are modified version of MiniJava from Andrew Appel's [Modern Compiler Implementation in Java](http://www.cs.princeton.edu/~appel/modern/java/). Differences include the removal declaration modifiers (public, static, etc.) and addition of higher-order functions.  See [lab #2|http://main.metaprl.org/jyh/classes/cs134/cs134b/2002/labs/lab2/lab2.pdf] for a complete list.
+
+Code will be written using TDD. CI can be found on [CloudBees](https://jlee.ci.cloudbees.com/job/appel-exercises/).

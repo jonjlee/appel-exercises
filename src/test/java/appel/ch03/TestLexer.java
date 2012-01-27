@@ -14,7 +14,7 @@ import appel.ch03.node.*;
 public class TestLexer {
 	
 	public void symbols() {
-		testTokens(",:;()[]{}", TComma.class, TColon.class, TSemicolon.class, TLparen.class, TRparen.class, TLbrack.class, TRbrack.class, TLbrace.class, TRbrace.class);
+		testTokens(",:;()[]{}", TComma.class, TColon.class, TSemi.class, TLparen.class, TRparen.class, TLbrack.class, TRbrack.class, TLbrace.class, TRbrace.class);
 		testTokens("+-*/%", TPlus.class, TMinus.class, TTimes.class, TDivide.class, TMod.class);
 		testTokens("== != > >= < <= && ||", TEqeq.class, TNeq.class, TGt.class, TGe.class, TLt.class, TLe.class, TAnd.class, TOr.class);
 		testTokens("= += -= *= /= %=", TEq.class, TPluseq.class, TMinuseq.class, TTimeseq.class, TDivideeq.class, TModeq.class);
@@ -26,8 +26,7 @@ public class TestLexer {
 		testTokens("if else", TIf.class, TElse.class);
 		testTokens("for do while break", TFor.class, TDo.class, TWhile.class, TBreak.class);
 		testTokens("try catch finally throw finally", TTry.class, TCatch.class, TFinally.class, TThrow.class, TFinally.class);
-		testTokens("public protected private static new", TPublic.class, TProtected.class, TPrivate.class, TStatic.class, TNew.class);
-		testTokens("interface class extends implements this instanceof", TInterface.class, TClasskeyword.class, TExtends.class, TImplements.class, TThis.class, TInstanceof.class);
+		testTokens("new interface class extends implements this instanceof", TNew.class, TInterface.class, TClasskeyword.class, TExtends.class, TImplements.class, TThis.class, TInstanceof.class);
 		testTokens("return true false null", TReturn.class, TTrue.class, TFalse.class, TNull.class);
 		testTokens("void int boolean String", TVoid.class, TInt.class, TBoolean.class, TStringtype.class);
 	}

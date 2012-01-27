@@ -16,7 +16,7 @@ Helpers
 
 Tokens
 	// Symbols
-	comma = ','; colon = ':'; semicolon = ';'; bang = '!'; dot = '.';
+	comma = ','; colon = ':'; semi = ';'; bang = '!'; dot = '.';
 	lparen = '('; rparen = ')'; lbrack = '['; rbrack = ']'; lbrace = '{'; rbrace = '}';
 	plus = '+'; minus = '-'; times = '*'; divide = '/'; mod = '%';
 	pluseq = '+='; minuseq = '-='; timeseq = '*='; divideeq = '/='; modeq = '%=';
@@ -29,7 +29,6 @@ Tokens
 	if = 'if'; else = 'else';
 	for = 'for'; do = 'do'; while = 'while'; break = 'break';
 	new = 'new'; throw = 'throw'; try = 'try'; catch = 'catch'; finally = 'finally';
-	static = 'static'; public = 'public'; protected = 'protected'; private = 'private';
 	classkeyword = 'class'; interface = 'interface'; extends = 'extends'; implements = 'implements';
 	this = 'this'; instanceof = 'instanceof';
 	return = 'return'; true = 'true'; false = 'false'; null = 'null';
@@ -63,16 +62,34 @@ Ignored Tokens
 
 Productions
 	// Top-level program (one .java file)
-	prog = class_or_interface_def1*;
-	type_mods = 
-		{public} public |
-		{protected} protected |
-		{private} private;
-	class_or_interface_def1 = type_mods static? class_or_interface_def2;
-	class_or_interface_def2 = 
-		{class} class_def | 
+	prog = class_or_interface_def+;
+	class_or_interface_def = 
+		{class} class_def |
 		{interface} interface_def;
 	
 	// Classes and interfaces
-	interface_def = interface id lbrace rbrace;
+	interface_def = interface id lbrace member_decl* rbrace;
 	class_def = classkeyword id lbrace rbrace;
+	
+	// Definitions and declarations
+	member_decl = type_spec direct_decl lparen opt_var_decl_list rparen semi;
+	var_decl = type_spec direct_decl;
+	primitive_type = 
+		{void} void |
+		{int} int |
+		{bool} boolean |
+		{string} stringtype;
+	type_spec = 
+		{primitive} primitive_type |
+		{object} id |
+		{array} type_spec lbrack rbrack;
+	direct_decl = 
+		id |
+		{array} direct_decl lbrack rbrack |
+		{fun} direct_decl lparen opt_var_decl_list rparen;
+	opt_var_decl_list =
+		|
+		{decl_list} var_decl_list; 
+	var_decl_list = 
+		var_decl |
+		{multi} var_decl_list comma var_decl; 
