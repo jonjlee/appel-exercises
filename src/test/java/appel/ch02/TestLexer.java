@@ -10,9 +10,10 @@ import org.testng.annotations.Test;
 import appel.ch02.lexer.Lexer;
 import appel.ch02.node.*;
 
+@Test
 public class TestLexer {
 	
-	@Test public void symbols() {
+	public void symbols() {
 		testTokens(",:;()[]{}", TComma.class, TColon.class, TSemicolon.class, TLparen.class, TRparen.class, TLbrack.class, TRbrack.class, TLbrace.class, TRbrace.class);
 		testTokens("+-*/%", TPlus.class, TMinus.class, TTimes.class, TDivide.class, TMod.class);
 		testTokens("== != > >= < <= && ||", TEq.class, TNeq.class, TGt.class, TGe.class, TLt.class, TLe.class, TAnd.class, TOr.class);
@@ -20,7 +21,7 @@ public class TestLexer {
 		testTokens("! ++ --", TBang.class, TInc.class, TDec.class);
 	}
 
-	@Test public void reserved() {
+	public void reserved() {
 		testTokens("System.out.println length", TPrintln.class, TLength.class);
 		testTokens("if else", TIf.class, TElse.class);
 		testTokens("for do while break", TFor.class, TDo.class, TWhile.class, TBreak.class);
@@ -31,7 +32,7 @@ public class TestLexer {
 		testTokens("void int boolean String", TVoid.class, TInt.class, TBoolean.class, TStringtype.class);
 	}
 	
-	@Test public void numbers() {
+	public void numbers() {
 		testTokens("0 1 10", TDecimal.class, TDecimal.class, TDecimal.class);
 		testTokens("01 07", TOctal.class, TOctal.class);
 		testTokens("0x0 0x0111 0xAF1", THex.class, THex.class, THex.class);
@@ -39,12 +40,12 @@ public class TestLexer {
 		testTokens("1e1 1e+1 1e-1 1.e1 1.e+1 1.e-1 .1e10 0.1e10 1.5e10 1.0e+10", TFloat.class, TFloat.class, TFloat.class, TFloat.class, TFloat.class, TFloat.class, TFloat.class, TFloat.class, TFloat.class, TFloat.class);
 	}
 	
-	@Test public void strings() {
+	public void strings() {
 		testTokens("' ' 'x' '\\n' '\\t' '\\''", TChar.class, TChar.class, TChar.class, TChar.class, TChar.class);
 		testTokens("\"\" \"string\" \"\\\"\" \"\\\"\\\"\" \"\\\"abc\\\"\\\"\\\"\"", TString.class, TString.class, TString.class, TString.class, TString.class);
 	}
 	
-	@Test public void lineComments() {
+	public void lineComments() {
 		testTokens("//", TComment.class);
 		testTokens("//\n", TComment.class);
 		testTokens("// ", TComment.class);
@@ -53,7 +54,7 @@ public class TestLexer {
 		testTokens("x      // inline", TId.class, TComment.class);
 	}
 	
-	@Test public void comments() {
+	public void comments() {
 		testTokens("/**/", TComment.class);
 		testTokens("/* */", TComment.class);
 		testTokens("/*a*/", TComment.class);
@@ -67,12 +68,12 @@ public class TestLexer {
 		testTokens("/* contains ****/", TComment.class);
 	}
 
-	public Lexer initLexer(String input) {
+	private Lexer initLexer(String input) {
 		Lexer lex = new Lexer(new PushbackReader(new StringReader(input)));
 		return lex;
 	}
 
-	public void testTokens(String input, Class<?>... expectedTokens) {
+	private void testTokens(String input, Class<?>... expectedTokens) {
 		Lexer lex = initLexer(input);
 		Class<?> tokClass;
 		int i = 0;
