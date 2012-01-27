@@ -86,8 +86,8 @@ public class TestParser {
 				"  \n" +
 				"  Main(int arg, T obj) {}\n" +
 				"  \n" +
-				"  int x() { 0e-10; }\n" +
-				"  String y(String[] params) { }\n" +
+				"  int x() { int a = 0e-10; }\n" +
+				"  String y(String[] params) { String[] s = params; }\n" +
 				"  int z(boolean a, int b, AnotherClass c(int[] param)) {\n" +
 				"  }\n" +
 				"}");

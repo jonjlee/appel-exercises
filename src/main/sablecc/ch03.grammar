@@ -119,16 +119,22 @@ Productions
 		{octal} octal |
 		{hex} hex |
 		{float} float;
-	expr = 
+	expr =
+		{term} term |
+		{assignment} [left]:expr eq term;
+	literal = 
 		{null} null |
 		{true} true |
 		{false} false |
 		{number} number |
 		{char} char |
-		{string} string |
+		{string} string;
+	term =
+		{literal} literal | 
 		{id} id;
 
 	// Statements
-	stmt = 
+	stmt =
+		{vars} var_defs |
 		{expr} expr semi |
 		{empty} semi;
