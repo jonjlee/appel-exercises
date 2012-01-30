@@ -16,13 +16,12 @@ public class TestLexer {
 	public void symbols() {
 		testTokens(",:;()[]{}", TComma.class, TColon.class, TSemi.class, TLparen.class, TRparen.class, TLbrack.class, TRbrack.class, TLbrace.class, TRbrace.class);
 		testTokens("+-*/%", TPlus.class, TMinus.class, TTimes.class, TDivide.class, TMod.class);
-		testTokens("== != > >= < <= && ||", TEqeq.class, TNeq.class, TGt.class, TGe.class, TLt.class, TLe.class, TAnd.class, TOr.class);
 		testTokens("= += -= *= /= %=", TEq.class, TPluseq.class, TMinuseq.class, TTimeseq.class, TDivideeq.class, TModeq.class);
-		testTokens("! ++ --", TBang.class, TInc.class, TDec.class);
+		testTokens("== != > >= < <= && ||", TEqeq.class, TNeq.class, TGt.class, TGe.class, TLt.class, TLe.class, TAndand.class, TOror.class);
+		testTokens("! ++ --", TBang.class, TPlusplus.class, TMinusminus.class);
 	}
 
 	public void reserved() {
-		testTokens("System.out.println length", TPrintln.class, TLength.class);
 		testTokens("if else", TIf.class, TElse.class);
 		testTokens("for do while break", TFor.class, TDo.class, TWhile.class, TBreak.class);
 		testTokens("try catch finally throw finally", TTry.class, TCatch.class, TFinally.class, TThrow.class, TFinally.class);

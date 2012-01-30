@@ -25,11 +25,7 @@ public class TestParser {
 	public void simpleInterfaceDecl() {
 		Node s = parse("interface MainProgram { void Main(); }");
 		assertValid(s);
-		assertContainsSingleClassOrInterface(s, "MainProgram");
-		s.apply(new DepthFirstAdapter() {
-			@Override public void inAVoidPrimitiveType(AVoidPrimitiveType node) {
-			}
-		});
+		assertMethodExists(s, "Main");
 	}
 	public void errorInInterfaceDecl() {
 		//              1        10        20        30
@@ -97,6 +93,115 @@ public class TestParser {
 		assertMethodExists(s, "z");
 	}
 	
+	public void primitiveVars() {
+		assertValid(parseStmt("int x"));
+		assertValid(parseStmt("boolean x, y = 0"));
+		assertValid(parseStmt("String x"));
+		assertValid(parseStmt("MyClass x"));
+	}
+
+	public void funDecls() {
+		assertValid(parseStmt("void x()"));
+		assertValid(parseStmt("int x()"));
+		assertValid(parseStmt("String x() { x(); }"));
+		assertValid(parseStmt("int x(boolean y, void z(int a)) {}"));
+	}
+
+	public void voidVarTypeIsInvalid() {
+		assertInvalid(parseStmt("void x"));
+		assertInvalid(parseStmt("int x(void y)"));
+	}
+	
+	public void newExpr() {
+		assertValid(parseStmt("Main m = new Main()"));
+		assertInvalid(parseStmt("Main m = new Main"));
+		assertValid(parseStmt("Main[] m = new Main[10]"));
+		assertValid(parseStmt("int[] m = new int[2]"));
+		assertValid(parseStmt("m = new boolean[2][3][]"));
+		assertInvalid(parseStmt("m = new boolean[2][][3]"));
+		assertValid(parseStmt("String[][] m[][] = new String[2][1][][]"));
+		assertInvalid(parseStmt("m = new int[]"));
+	}
+	
+	public void binopExpr() {
+		assertValid(parseStmt("1 + 2"));
+		assertValid(parseStmt("a + b / 2 * c / (d % e && true || false)"));
+	}
+
+	public void unopExpr() {
+		assertValid(parseStmt("!x; -x; x++; x--"));
+		assertValid(parseStmt("!(-x++--)"));
+	}
+
+	public void boolExpr() {
+		assertValid(parseStmt("1 != 2"));
+		assertValid(parseStmt("1 != 2 + 3 * 4 == 5"));
+		assertValid(parseStmt("1 < 2 <= 3 > 4 >= 5"));
+	}
+
+	public void assignExpr() {
+		assertValid(parseStmt("x = 2"));
+		assertValid(parseStmt("x = y = z"));
+		assertValid(parseStmt("x = (f || g)"));
+	}
+	
+	public void binopAssignExpr() {
+		assertValid(parseStmt("x += 2"));
+		assertValid(parseStmt("a += b /= 2 *= c /= (d %= e && true)"));
+	}
+	
+	public void projectionExpr() {
+		assertValid(parseStmt("x.y"));
+		assertValid(parseStmt("x.y()"));
+		assertValid(parseStmt("x.y[2]"));
+		assertValid(parseStmt("x.y.a.b = 12"));
+		assertValid(parseStmt("x.y.a.b = c.d"));
+		assertInvalid(parseStmt("x.1"));
+	}
+	
+	public void subscriptExpr() {
+		assertValid(parseStmt("x[1]"));
+		assertValid(parseStmt("x[1][2][3].y.a.b = 12"));
+		assertValid(parseStmt("x.y.a.b[3] = c[1][2].d[3]"));
+		assertInvalid(parseStmt("x[]"));
+	}
+	
+	public void applyExpr() {
+		assertValid(parseStmt("x()"));
+		assertValid(parseStmt("x(12, 'b', f(), !(-1 + 2))"));
+		assertInvalid(parseStmt("x(int a)"));
+	}
+	
+	public void forLoop() {
+		assertValid(parseStmt("for (;;);"));
+		assertValid(parseStmt("for (i = 0; i < 10; i++);"));
+		assertValid(parseStmt("for (i = 0; i < 10; i++) {}"));
+		assertValid(parseStmt("for (i = 0; i < 10; i++) { f(i); }"));
+	}
+
+	public void whileLoop() {
+		assertValid(parseStmt("while (true);"));
+		assertValid(parseStmt("while (true) {}"));
+		assertValid(parseStmt("while ((i = s.length()) < 10) { f(i); }"));
+	}
+	
+	public void returnStmt() {
+		assertValid(parseStmt("return true;"));
+	}
+
+	public void breakStmt() {
+		assertValid(parseStmt("for (;;) { break; }"));
+	}
+
+	public void tryCatchStmt() {
+		assertValid(parseStmt("try {} catch (Exception e) {}"));
+		assertInvalid(parseStmt("try {}"));
+		assertInvalid(parseStmt("try {} catch ()"));
+		assertInvalid(parseStmt("try {} catch () {}"));
+		assertInvalid(parseStmt("try catch (Exception e) {}"));
+	}
+
+
 	private Node parse(String input) {
 		try {
 			Lexer l = new Lexer(new PushbackReader(new StringReader(input)));
@@ -107,6 +212,11 @@ public class TestParser {
 		}
 	}
 	
+	private Node parseStmt(String stmt) {
+		//            1        10        20
+		return parse("class X{ void x(){ " + stmt + ";}}");
+	}
+
 	private void assertValid(Node parseResult) {
 		if (parseResult instanceof ParseFailed) {
 			ParseFailed r = (ParseFailed) parseResult;
@@ -114,6 +224,10 @@ public class TestParser {
 		}
 	}
 	
+	private void assertInvalid(Node parseResult) {
+		assertInvalid(parseResult, -1, -1, -1, -1);
+	}
+
 	private void assertInvalid(Node parseResult, int linestart, int lineend, int colstart, int colend) {
 		if (!(parseResult instanceof ParseFailed)) {
 			fail("Expected parse error but succeeded");
@@ -147,17 +261,19 @@ public class TestParser {
 	}
 	private void assertMethodExists(final Node s, final String name) {
 		s.apply(new DepthFirstAdapter() {
-			boolean inVarList = false;
+			int paramListDepth = 0;
 			boolean found = false;
 			@Override public void inAMemberDecl(AMemberDecl node) { inMember(node); }
 			@Override public void inAFunDef(AFunDef node) { inMember(node); }
 			public void inMember(Node node) {
 				node.apply(new DepthFirstAdapter() {
-					@Override public void inAStdFunDirectDecl(AStdFunDirectDecl node) {
-						if (!inVarList && name.equals(node.getId().getText())) { found = true; }
+					@Override public void inAFunIdAndParams(AFunIdAndParams node) {
+						if (paramListDepth == 0 && name.equals(node.getId().getText())) { found = true; }
 					}
-					@Override public void inAOptParamDeclList(AOptParamDeclList node) { inVarList = true; }
-					@Override public void outAOptParamDeclList(AOptParamDeclList node) { inVarList = false; }
+					@Override public void inASingleParamDeclList(ASingleParamDeclList node) { paramListDepth++; }
+					@Override public void inAMultiParamDeclList(AMultiParamDeclList node) { paramListDepth++; }
+					@Override public void outASingleParamDeclList(ASingleParamDeclList node) { paramListDepth--; }
+					@Override public void outAMultiParamDeclList(AMultiParamDeclList node) { paramListDepth--; }
 				});
 			}
 			@Override public void outAClassClassOrInterfaceDef(AClassClassOrInterfaceDef node) { assertTrue(found, "Method " + name + " not found."); }

@@ -19,13 +19,12 @@ Tokens
 	comma = ','; colon = ':'; semi = ';'; bang = '!'; dot = '.';
 	lparen = '('; rparen = ')'; lbrack = '['; rbrack = ']'; lbrace = '{'; rbrace = '}';
 	plus = '+'; minus = '-'; times = '*'; divide = '/'; mod = '%';
-	pluseq = '+='; minuseq = '-='; timeseq = '*='; divideeq = '/='; modeq = '%=';
+	eq = '='; pluseq = '+='; minuseq = '-='; timeseq = '*='; divideeq = '/='; modeq = '%=';
 	eqeq = '=='; neq = '!='; lt = '<'; le = '<='; gt = '>'; ge = '>=';
-	and = '&&'; or = '||'; eq = '=';
-	inc = '++'; dec = '--';
+	andand = '&&'; oror = '||';
+	plusplus = '++'; minusminus = '--';
 
 	// Reserved
-	println = 'System.out.println'; length = 'length';
 	if = 'if'; else = 'else';
 	for = 'for'; do = 'do'; while = 'while'; break = 'break';
 	new = 'new'; throw = 'throw'; try = 'try'; catch = 'catch'; finally = 'finally';
@@ -61,80 +60,186 @@ Ignored Tokens
 	comment;
 
 Productions
-	// Top-level program (one .java file)
+	// -------------------------------------------------------
+	// Top-level program (i.e. a .java file)
+	// -------------------------------------------------------
 	prog = class_or_interface_def+;
 	class_or_interface_def = 
 		{class} class_def |
 		{interface} interface_def;
 	
+	// -------------------------------------------------------
 	// Classes and interfaces
+	// -------------------------------------------------------
 	interface_def = interface id lbrace member_decl* rbrace;
 	class_def = classkeyword id lbrace member_def* rbrace;
 	
+	// -------------------------------------------------------
 	// Declarations
-	member_decl = type_spec fun_direct_decl semi;
-	primitive_type = 
+	// -------------------------------------------------------
+	member_decl = fun_decl semi;
+	fun_type = 
 		{void} void |
-		{int} int |
-		{bool} boolean |
-		{string} stringtype;
-	type_spec = 
-		{primitive} primitive_type |
-		{object} id |
-		{array} type_spec lbrack rbrack;
-	param_decl = type_spec direct_decl;
-	direct_decl = 
-		{var} var_direct_decl |
-		{fun} fun_direct_decl;
-	var_direct_decl =
-		{id} id |
-		{array} direct_decl lbrack rbrack;
-	fun_direct_decl =
-		{std} id lparen opt_param_decl_list rparen; 
-	opt_param_decl_list =
-		param_decl_list | 
-		{empty};
+		{normal} var_type; 
+	fun_type_spec = fun_type array_dimension*;
+	fun_decl = fun_type_spec fun_id_and_params;
+	fun_id_and_params = id lparen param_decl_list* rparen;
 	param_decl_list = 
 		{single} param_decl |
 		{multi} param_decl_list comma param_decl;
+	param_decl = 
+		{fun} fun_decl |
+		{var} var_decl;
+	var_type = 
+		{int} int |
+		{bool} boolean |
+		{string} stringtype |
+		{class} id;
+	var_type_spec = var_type array_dimension*;
+	var_decl = var_type_spec var_id_and_dimenions;
+	var_id_and_dimenions = id array_dimension*;
+	array_dimension = lbrack rbrack;
 
+	// -------------------------------------------------------
 	// Definitions 
+	// -------------------------------------------------------
 	member_def =
 		{var} var_defs |
 		{fun} fun_def |
 		{constructor} constructor_def;
-	var_defs = type_spec var_def_list semi;
+	var_defs = var_type_spec var_def_list semi;
 	var_def_list = 
 		{single} var_def |
 		{multi} var_def_list comma var_def;
 	var_def =
-		{no_init} var_direct_decl |
-		{with_init} var_direct_decl eq expr;
-	fun_def = type_spec fun_direct_decl lbrace stmt* rbrace;
-	constructor_def = fun_direct_decl lbrace stmt* rbrace;
+		{no_init} var_id_and_dimenions |
+		{with_init} var_id_and_dimenions eq expr;
+	fun_def = fun_type_spec fun_id_and_params lbrace stmt* rbrace;
+	constructor_def = fun_id_and_params lbrace stmt* rbrace;
 	
-	// Expressions
-	number = 
+	// -------------------------------------------------------
+	// Expressions (ordered by precedence)
+	// -------------------------------------------------------
+	value = 
+		// 1. A single value, parens groups, new expressions, projections, subscripts, fun apply
+		{non_literal} non_literal_value |
+		{literal} literal_value;
+	pre_unary_expr =
+		// 2.. ++, --, -, !
+		{neg} minus pre_unary_expr |
+		{not} bang pre_unary_expr |
+		{pre_dec} minusminus pre_unary_expr |
+		{pre_inc} plusplus pre_unary_expr |
+		{simple} value;
+	post_unary_expr =
+		{post_dec} post_unary_expr minusminus |
+		{post_inc} post_unary_expr plusplus |
+		{simple} pre_unary_expr;
+	mult_expr =
+		// 3. *, /, %
+		{times} mult_expr times post_unary_expr |
+		{divide} mult_expr divide post_unary_expr |
+		{mod} mult_expr mod post_unary_expr |
+		{simple} post_unary_expr;
+	add_expr =
+		// 4. +, -
+		{plus} add_expr plus mult_expr |
+		{minus} add_expr minus mult_expr |
+		{simple} mult_expr;
+	ineq_expr = 
+		// 5. <, >, <=, >=
+		{lt} ineq_expr lt add_expr | 
+		{gt} ineq_expr gt add_expr | 
+		{le} ineq_expr le add_expr |
+		{ge} ineq_expr ge add_expr | 
+		{simple} add_expr;
+	instanceof_expr = 
+		// 6. instanceof
+		instanceof_expr instanceof ineq_expr |
+		{simple} ineq_expr;
+	eq_expr =
+		// 7. ==, !=
+		{eq} eq_expr eqeq instanceof_expr |
+		{neq} eq_expr neq instanceof_expr |
+		{simple} instanceof_expr;
+	and_expr =
+		// 8. && 
+		and_expr andand eq_expr |
+		{simple} eq_expr;
+	or_expr =
+		// 9. || 
+		or_expr oror and_expr |
+		{simple} and_expr; 
+	expr =
+		// 10. assignment
+		{assignment} [left]:expr eq [right]:or_expr |
+		{binop_assign} [left]:expr binop_eq [right]:or_expr |
+		{simple} or_expr;
+
+	// Expression helpers
+	binop_eq =
+		{plus} pluseq |
+		{minus} minuseq |
+		{times} timeseq |
+		{divide} divideeq |
+		{mod} modeq;
+	literal_value =
+		{char} char |
 		{int} integer |
 		{octal} octal |
 		{hex} hex |
-		{float} float;
-	expr =
-		{term} term |
-		{assignment} [left]:expr eq term;
-	literal = 
+		{float} float |
+		{string} string |
 		{null} null |
 		{true} true |
-		{false} false |
-		{number} number |
-		{char} char |
+		{false} false;
+	non_literal_value =
+		{var} id | 
+		{paren} paren_expr |
+		{new} new_expr |
+		{apply} apply_expr |
+		{subscript} subscript_expr |
+		{projection} projection_expr;
+	paren_expr = lparen expr rparen;
+	apply_expr = non_literal_value lparen arg_list? rparen;
+	arg_list =
+		{single} expr |
+		{multi} arg_list comma expr;
+	projection_expr = 
+		{single} projection_value dot id |
+		{multi} projection_expr dot id; 
+	projection_value =
+		{var} id | 
+		{paren} paren_expr |
+		{new} new_expr |
+		{apply} apply_expr |
+		{subscript} subscript_expr |
 		{string} string;
-	term =
-		{literal} literal | 
-		{id} id;
+	subscript_expr = subscript_value array_index_or_size;
+	subscript_value = 
+		{paren} paren_expr |
+		{apply} apply_expr |
+		{projection} projection_expr |
+		{subscript} subscript_expr |
+		{var} id;
+	array_index_or_size = lbrack expr rbrack;
+	new_expr = 
+		{object} new id lparen arg_list? rparen |
+		{array} new var_type array_index_or_size+ array_dimension*;
 
+	// -------------------------------------------------------
 	// Statements
+	// -------------------------------------------------------
 	stmt =
-		{vars} var_defs |
+		{var} var_defs |
+		{fun_decl} fun_decl semi |
+		{fun} fun_def semi |
 		{expr} expr semi |
+		{for} for lparen [init]:arg_list? [semi1]:semi [cond]:expr? [semi2]:semi [inc]:arg_list? rparen stmt |
+		{while} while lparen expr rparen stmt |
+		{return} return expr semi |
+		{break} break semi |
+		{try} try lbrace stmt* rbrace catchblock+ |
+		{block} lbrace stmt* rbrace | 
 		{empty} semi;
+	catchblock = catch lparen [type]:id [var]:id rparen lbrace stmt* rbrace;
