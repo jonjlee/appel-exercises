@@ -31,7 +31,7 @@ Tokens
 	classkeyword = 'class'; interface = 'interface'; extends = 'extends'; implements = 'implements';
 	this = 'this'; instanceof = 'instanceof';
 	return = 'return'; true = 'true'; false = 'false'; null = 'null';
-	void = 'void'; int = 'int'; boolean = 'boolean'; stringtype = 'String';
+	void = 'void'; type_int = 'int'; type_float = 'float'; type_boolean = 'boolean'; type_char = 'char'; type_string = 'String';
 
 	// Numbers
 	integer = '0' | nonzero;
@@ -39,8 +39,8 @@ Tokens
 	hex = '0x' [digit + [['a'..'f'] + ['A'..'F']]]+;
 	float = 
 		(digit+ '.' digit* exponent? ) | 
-		(digit* '.' digit+ exponent? ) |
-		(digit+ exponent);
+		(digit* '.' digit+ exponent? )
+		| (digit+ exponent);
 	
 	// Strings
 	char = ''' (escapedchar | any) ''';
@@ -52,8 +52,8 @@ Tokens
 	// Whitespace/comments
 	whitespace = (' ' | '\t' | eol)+;
 	comment = 
-		('//' [any - [10 + 13]]* eol?) |
-		('/*' nonstar* (star+ [any - '/'] nonstar*)* star* '*/');
+		('//' [any - [10 + 13]]* eol?)
+		| ('/*' nonstar* (star+ [any - '/'] nonstar*)* star* '*/');
 
 Ignored Tokens
 	whitespace,
@@ -63,192 +63,265 @@ Productions
 	// -------------------------------------------------------
 	// Top-level program (i.e. a .java file)
 	// -------------------------------------------------------
-	prog = class_or_interface_def+;
-	class_or_interface_def = 
-		{class} class_def |
-		{interface} interface_def;
+	prog {-> expr} 
+		= class_or_interface_def+                                     {-> New expr.seq([class_or_interface_def.expr])};
+	class_or_interface_def {-> expr}
+		= {class} class_def                                           {-> class_def.expr}
+		| {interface} interface_def                                   {-> interface_def.expr};
 	
 	// -------------------------------------------------------
 	// Classes and interfaces
 	// -------------------------------------------------------
-	interface_def = interface id lbrace member_decl* rbrace;
-	class_def = classkeyword id lbrace member_def* rbrace;
+	interface_def {-> expr} 
+		= interface id lbrace member_decl* rbrace                     {-> New expr.def(New def.type(New type.interface(id, [member_decl.decl])))};
+	class_def {-> expr}
+		= classkeyword id extends_type? implements_types? lbrace member_def* rbrace
+		                                                              {-> New expr.def(New def.class(id, extends_type.type, [implements_types.type], [member_def.def]))};
+	extends_type {-> type} = extends id                               {-> New type.id(id)};
+	implements_types {-> type*}
+		= {single} implements id                                      {-> [New type.id(id)]}
+		| {multi} id comma implements_types                           {-> [New type.id(id), implements_types.type]};
 	
 	// -------------------------------------------------------
 	// Declarations
 	// -------------------------------------------------------
-	member_decl = fun_decl semi;
-	fun_type = 
-		{void} void |
-		{normal} var_type; 
-	fun_type_spec = fun_type array_dimension*;
-	fun_decl = fun_type_spec fun_id_and_params;
-	fun_id_and_params = id lparen param_decl_list* rparen;
-	param_decl_list = 
-		{single} param_decl |
-		{multi} param_decl_list comma param_decl;
-	param_decl = 
-		{fun} fun_decl |
-		{var} var_decl;
-	var_type = 
-		{int} int |
-		{bool} boolean |
-		{string} stringtype |
-		{class} id;
-	var_type_spec = var_type array_dimension*;
-	var_decl = var_type_spec var_id_and_dimenions;
-	var_id_and_dimenions = id array_dimension*;
-	array_dimension = lbrack rbrack;
+	member_decl {-> decl}
+		= fun_decl semi                                               {-> fun_decl.decl};
+	fun_type_spec {-> type}
+		= {void} void                                                 {-> New type.void()}
+		| {non_void} var_type_spec                                    {-> var_type_spec.type};
+	fun_decl {-> decl} 
+		= fun_type_spec id fun_params                                 {-> New decl.fun(id, fun_type_spec.type, [fun_params.decl])};
+	fun_params {-> decl*}
+	 	= lparen param_decl_list? rparen                               {-> [param_decl_list.decl]};
+	param_decl_list {-> decl*}
+		= {single} param_decl                                         {-> [param_decl.decl]}
+		| {multi} param_decl comma param_decl_list                    {-> [param_decl.decl, param_decl_list.decl]};
+	param_decl {-> decl}
+		= {fun} fun_decl                                              {-> fun_decl.decl}
+		| {var} var_decl                                              {-> var_decl.decl};
+	var_type {-> type}
+		= {int} type_int                                              {-> New type.int()}
+		| {float} type_float                                          {-> New type.float()}
+		| {bool} type_boolean                                         {-> New type.boolean()}
+		| {char} type_char                                            {-> New type.char()}
+		| {string} type_string                                        {-> New type.string()}
+		| {class} id                                                  {-> New type.id(id)};
+	var_type_spec {-> type}
+		= {single} var_type                                           {-> var_type.type}
+		| {array} var_type array_dimension+                           {-> New type.array(var_type.type, [array_dimension.expr])};
+	var_decl {-> decl}
+		= var_type_spec id array_dimension*                           {-> New decl.var(var_type_spec.type, id, [array_dimension.expr])};
+	array_dimension {-> expr} = lbrack rbrack                         {-> New expr.none()};
 
 	// -------------------------------------------------------
 	// Definitions 
 	// -------------------------------------------------------
-	member_def =
-		{var} var_defs |
-		{fun} fun_def |
-		{constructor} constructor_def;
-	var_defs = var_type_spec var_def_list semi;
-	var_def_list = 
-		{single} var_def |
-		{multi} var_def_list comma var_def;
-	var_def =
-		{no_init} var_id_and_dimenions |
-		{with_init} var_id_and_dimenions eq expr;
-	fun_def = fun_type_spec fun_id_and_params lbrace stmt* rbrace;
-	constructor_def = fun_id_and_params lbrace stmt* rbrace;
+	member_def {-> def}
+		= {vars} var_list_def semi                                                  {-> var_list_def.def}
+		| {fun} fun_def                                                             {-> fun_def.def}
+		| {constructor} constructor_def                                             {-> constructor_def.def};
+	var_list_def {-> def}
+		= var_type_spec [vars]:var_list_items                                       {-> New def.vars(var_type_spec.type, [vars.var_and_init])};
+	var_list_items {-> var_and_init*}
+		= {single} id array_dimension* var_init?                                    {-> [New var_and_init(id, [array_dimension.expr], var_init.expr)]}
+		| {multi} id array_dimension* var_init? comma [rest]:var_list_items         {-> [New var_and_init(id, [array_dimension.expr], var_init.expr), rest.var_and_init]};
+	var_init {->expr}
+		= eq expr                                                                   {-> expr.expr};
+	fun_def {-> def}
+		= fun_type_spec id fun_params lbrace stmt* rbrace                           {-> New def.fun(id, [fun_params.decl], fun_type_spec.type, [stmt.expr])};
+	constructor_def {-> def}
+	 	= id fun_params lbrace stmt* rbrace                                         {-> New def.const(id, [fun_params.decl], [stmt.expr])};
 	
 	// -------------------------------------------------------
 	// Expressions (ordered by precedence)
 	// -------------------------------------------------------
-	value = 
-		// 1. A single value, parens groups, new expressions, projections, subscripts, fun apply
-		{non_literal} non_literal_value |
-		{literal} literal_value;
-	pre_unary_expr =
-		// 2.. ++, --, -, !
-		{neg} minus pre_unary_expr |
-		{not} bang pre_unary_expr |
-		{pre_dec} minusminus pre_unary_expr |
-		{pre_inc} plusplus pre_unary_expr |
-		{simple} value;
-	post_unary_expr =
-		{post_dec} post_unary_expr minusminus |
-		{post_inc} post_unary_expr plusplus |
-		{simple} pre_unary_expr;
-	mult_expr =
-		// 3. *, /, %
-		{times} mult_expr times post_unary_expr |
-		{divide} mult_expr divide post_unary_expr |
-		{mod} mult_expr mod post_unary_expr |
-		{simple} post_unary_expr;
-	add_expr =
-		// 4. +, -
-		{plus} add_expr plus mult_expr |
-		{minus} add_expr minus mult_expr |
-		{simple} mult_expr;
-	ineq_expr = 
-		// 5. <, >, <=, >=
-		{lt} ineq_expr lt add_expr | 
-		{gt} ineq_expr gt add_expr | 
-		{le} ineq_expr le add_expr |
-		{ge} ineq_expr ge add_expr | 
-		{simple} add_expr;
-	instanceof_expr = 
-		// 6. instanceof
-		instanceof_expr instanceof ineq_expr |
-		{simple} ineq_expr;
-	eq_expr =
-		// 7. ==, !=
-		{eq} eq_expr eqeq instanceof_expr |
-		{neq} eq_expr neq instanceof_expr |
-		{simple} instanceof_expr;
-	and_expr =
-		// 8. && 
-		and_expr andand eq_expr |
-		{simple} eq_expr;
-	or_expr =
-		// 9. || 
-		or_expr oror and_expr |
-		{simple} and_expr; 
-	expr =
-		// 10. assignment
-		{assignment} [left]:expr eq [right]:or_expr |
-		{binop_assign} [left]:expr binop_eq [right]:or_expr |
-		{simple} or_expr;
+
+	// 1. A single value, parens groups, new expressions, projections, subscripts, fun apply
+	value {-> expr}
+		= {non_literal} [val]:non_literal_value                       {-> val.expr}
+		| {literal} [val]:literal_value                               {-> val.expr};
+	// 2.. ++, --, -, !
+	pre_unary_expr {-> expr}
+		= {neg} minus [expr]:pre_unary_expr                           {-> New expr.unop(expr.expr, New unop.neg())}
+		| {not} bang [expr]:pre_unary_expr                            {-> New expr.unop(expr.expr, New unop.not())}
+		| {pre_dec} minusminus [expr]:pre_unary_expr                  {-> New expr.uarithop(expr.expr, New uarithop.pre_dec())}
+		| {pre_inc} plusplus [expr]:pre_unary_expr                    {-> New expr.uarithop(expr.expr, New uarithop.pre_inc())}
+		| {simple} [expr]:value                                       {-> expr.expr};
+	post_unary_expr {-> expr}
+		= {post_dec} [expr]:post_unary_expr minusminus                {-> New expr.uarithop(expr.expr, New uarithop.post_dec())}
+		| {post_inc} [expr]:post_unary_expr plusplus                  {-> New expr.uarithop(expr.expr, New uarithop.post_inc())}
+		| {simple} [expr]:pre_unary_expr                              {-> expr.expr};
+	// 3. *, /, %
+	mult_expr {-> expr}
+		= {times} [left]:mult_expr times [right]:post_unary_expr      {-> New expr.binop(left.expr, New binop.times(), right.expr)}
+		| {divide} [left]:mult_expr divide [right]:post_unary_expr    {-> New expr.binop(left.expr, New binop.divide(), right.expr)}
+		| {mod} [left]:mult_expr mod [right]:post_unary_expr          {-> New expr.binop(left.expr, New binop.mod(), right.expr)}
+		| {simple} [expr]:post_unary_expr                             {-> expr.expr};        
+	// 4. +, -                                                          
+	add_expr {-> expr}                                                      
+		= {plus} [left]:add_expr plus [right]:mult_expr               {-> New expr.binop(left.expr, New binop.plus(), right.expr)}
+		| {minus} [left]:add_expr minus [right]:mult_expr             {-> New expr.binop(left.expr, New binop.minus(), right.expr)}
+		| {simple} [expr]:mult_expr                                   {-> expr.expr};
+	// 5. <, >, <=, >=
+	ineq_expr {-> expr}
+		= {gt} [left]:ineq_expr gt [right]:add_expr                   {-> New expr.binop(left.expr, New binop.gt(), right.expr)}
+		| {lt} [left]:ineq_expr lt [right]:add_expr                   {-> New expr.binop(left.expr, New binop.lt(), right.expr)}
+		| {le} [left]:ineq_expr le [right]:add_expr                   {-> New expr.binop(left.expr, New binop.le(), right.expr)}
+		| {ge} [left]:ineq_expr ge [right]:add_expr                   {-> New expr.binop(left.expr, New binop.ge(), right.expr)}
+		| {simple} [expr]:add_expr                                    {-> expr.expr};
+	// 6. instanceof
+	instanceof_expr {-> expr}
+		= [left]:instanceof_expr instanceof [right]:ineq_expr         {-> New expr.instanceof(left.expr, right.expr)}
+		| {simple} [expr]:ineq_expr                                   {-> expr.expr};
+	// 7. ==, !=                                                
+	eq_expr {-> expr}
+		= {eq} [left]:eq_expr eqeq [right]:instanceof_expr            {-> New expr.binop(left.expr, New binop.eq(), right.expr)}
+		| {neq} [left]:eq_expr neq [right]:instanceof_expr            {-> New expr.binop(left.expr, New binop.neq(), right.expr)}
+		| {simple} [expr]:instanceof_expr                             {-> expr.expr};        
+	// 8. &&                                                            
+	and_expr {-> expr}
+		= [left]:and_expr andand [right]:eq_expr                      {-> New expr.boolop(left.expr, New boolop.and(), right.expr)}
+		| {simple} [expr]:eq_expr                                     {-> expr.expr};        
+	// 9. ||                                                            
+	or_expr {-> expr}
+		= [left]:or_expr oror [right]:and_expr                        {-> New expr.boolop(left.expr, New boolop.or(), right.expr)}
+		| {simple} [expr]:and_expr                                    {-> expr.expr}; 
+	// 10. assignment
+	expr {-> expr}
+		= {assign} [left]:expr eq [right]:or_expr                     {-> New expr.assign(left.expr, New binop.none(), right.expr)}
+		| {binop_assign} [left]:expr [op]:binop_eq [right]:or_expr    {-> New expr.assign(left.expr, op.binop, right.expr)}
+		| {simple} [expr]:or_expr                                     {-> expr.expr};
 
 	// Expression helpers
-	binop_eq =
-		{plus} pluseq |
-		{minus} minuseq |
-		{times} timeseq |
-		{divide} divideeq |
-		{mod} modeq;
-	literal_value =
-		{char} char |
-		{int} integer |
-		{octal} octal |
-		{hex} hex |
-		{float} float |
-		{string} string |
-		{null} null |
-		{true} true |
-		{false} false;
-	non_literal_value =
-		{var} id | 
-		{paren} paren_expr |
-		{new} new_expr |
-		{apply} apply_expr |
-		{subscript} subscript_expr |
-		{projection} projection_expr;
-	paren_expr = lparen expr rparen;
-	apply_expr = non_literal_value lparen arg_list? rparen;
-	arg_list =
-		{single} expr |
-		{multi} arg_list comma expr;
-	projection_expr = 
-		{single} projection_value dot id |
-		{multi} projection_expr dot id; 
-	projection_value =
-		{var} id | 
-		{paren} paren_expr |
-		{new} new_expr |
-		{apply} apply_expr |
-		{subscript} subscript_expr |
-		{string} string;
-	subscript_expr = subscript_value array_index_or_size;
-	subscript_value = 
-		{paren} paren_expr |
-		{apply} apply_expr |
-		{projection} projection_expr |
-		{subscript} subscript_expr |
-		{var} id;
-	array_index_or_size = lbrack expr rbrack;
-	new_expr = 
-		{object} new id lparen arg_list? rparen |
-		{array} new var_type array_index_or_size+ array_dimension*;
+	binop_eq {-> binop}
+		= {plus} pluseq                                               {-> New binop.plus()}
+		| {minus} minuseq                                             {-> New binop.minus()}
+		| {times} timeseq                                             {-> New binop.times()}
+		| {divide} divideeq                                           {-> New binop.divide()}
+		| {mod} modeq                                                 {-> New binop.mod()};
+	literal_value {-> expr}
+		= {char} char                                                 {-> New expr.char(char)}
+		| {int} integer                                               {-> New expr.number(New number.decimal(integer))}
+		| {octal} octal                                               {-> New expr.number(New number.octal(octal))}
+		| {hex} hex                                                   {-> New expr.number(New number.hex(hex))}
+		| {float} float                                               {-> New expr.number(New number.float(float))}
+		| {string} string                                             {-> New expr.string(string)}
+		| {null} null                                                 {-> New expr.null()}
+		| {true} true                                                 {-> New expr.bool(New bool.true())}
+		| {false} false                                               {-> New expr.bool(New bool.false())};
+	non_literal_value {-> expr}
+		= {var} id                                                    {-> New expr.var(id)}
+		| {paren} paren_expr                                          {-> paren_expr.expr}
+		| {new} new_expr                                              {-> new_expr.expr}
+		| {apply} apply_expr                                          {-> apply_expr.expr}
+		| {subscript} subscript_expr                                  {-> subscript_expr.expr}
+		| {project} project_expr                                      {-> project_expr.expr};
+	paren_expr {-> expr}
+		= lparen expr rparen                                          {-> expr.expr};
+	apply_expr {-> expr}
+		= [expr]:non_literal_value lparen arg_list? rparen            {-> New expr.apply(expr.expr, [arg_list.expr])};
+	arg_list {-> expr*}
+		= {single} expr                                               {-> [expr.expr]}
+		| {multi} expr comma [tail]:arg_list                          {-> [expr.expr, tail.expr]};
+	project_expr {-> expr}
+		= {single} [expr]:project_value dot id                        {-> New expr.project(expr.expr, id)}
+		| {multi} [expr]:project_expr dot id                          {-> New expr.project(expr.expr, id)};
+	project_value {-> expr}
+		= {var} id                                                    {-> New expr.var(id)}
+		| {paren} paren_expr                                          {-> paren_expr.expr}
+		| {new} new_expr                                              {-> new_expr.expr}
+		| {apply} apply_expr                                          {-> apply_expr.expr}
+		| {subscript} subscript_expr                                  {-> subscript_expr.expr}
+		| {string} string                                             {-> New expr.string(string)};
+	subscript_expr {-> expr}
+	 	= [expr]:subscript_value [index]:array_index_or_size          {-> New expr.subscript(expr.expr, index.expr)};
+	subscript_value {-> expr}
+		= {paren} paren_expr                                          {-> paren_expr.expr}
+		| {apply} apply_expr                                          {-> apply_expr.expr}
+		| {subscript} subscript_expr                                  {-> subscript_expr.expr}
+		| {project} project_expr                                      {-> project_expr.expr}
+		| {var} id                                                    {-> New expr.var(id)};
+	array_index_or_size {-> expr}
+		= lbrack expr rbrack                                          {-> expr.expr};
+	new_expr {-> expr}
+		= {object} new id lparen [args]:arg_list? rparen              {-> New expr.new_const(id, [args.expr])}
+		| {array} new var_type array_index_or_size+ array_dimension*  {-> New expr.new_array(var_type.type, [array_index_or_size.expr, array_dimension.expr])};
 
 	// -------------------------------------------------------
 	// Statements
 	// -------------------------------------------------------
-	stmt = 
-		{if_then} if lparen expr rparen [then_stmt]:stmt |
-		{if_then_else} if lparen expr rparen [then_stmt]:matched_if_stmt else [else_stmt]:stmt |
-		{for} for lparen [init]:arg_list? [semi1]:semi [cond]:expr? [semi2]:semi [inc]:arg_list? rparen stmt |
-		{while} while lparen expr rparen stmt |
-		{simple} simple_stmt;
-	matched_if_stmt = 
-		{if_then_else} if lparen expr rparen [then_stmt]:matched_if_stmt else [else_stmt]:matched_if_stmt |
-		{for} for lparen [init]:arg_list? [semi1]:semi [cond]:expr? [semi2]:semi [inc]:arg_list? rparen [stmt]:matched_if_stmt |
-		{while} while lparen expr rparen [stmt]:matched_if_stmt |
-		{simple} simple_stmt;
-	simple_stmt =
-		{var} var_defs |
-		{fun_decl} fun_decl semi |
-		{fun} fun_def semi |
-		{expr} expr semi |
-		{return} return expr semi |
-		{break} break semi |
-		{try} try lbrace stmt* rbrace catchblock+ |
-		{block} lbrace stmt* rbrace | 
-		{empty} semi;
-	catchblock = catch lparen [type]:id [var]:id rparen lbrace stmt* rbrace;
+	stmt {-> expr}
+		= {if_then} if lparen [cond]:expr rparen [then_stmt]:stmt                                                                  {-> New expr.if(cond.expr, then_stmt.expr, New expr.none())}
+		| {if_then_else} if lparen expr rparen [then_stmt]:matched_if_stmt else [else_stmt]:stmt                                   {-> New expr.if(expr.expr, then_stmt.expr, else_stmt.expr)}
+		| {for} for lparen [init]:arg_list? [semi1]:semi [cond]:expr? [semi2]:semi [inc]:arg_list? rparen stmt                     {-> New expr.for([init.expr], cond.expr, [inc.expr], stmt.expr)}
+		| {while} while lparen [cond]:expr rparen stmt                                                                             {-> New expr.while(cond.expr, stmt.expr)}
+		| {simple} unconditional_stmt                                                                                              {-> unconditional_stmt.expr};
+	matched_if_stmt {-> expr}
+		= {if_then_else} if lparen expr rparen [then_stmt]:matched_if_stmt else [else_stmt]:matched_if_stmt                        {-> New expr.if(expr.expr, then_stmt.expr, else_stmt.expr)}
+		| {for} for lparen [init]:arg_list? [semi1]:semi [cond]:expr? [semi2]:semi [inc]:arg_list? rparen [stmt]:matched_if_stmt   {-> New expr.for([init.expr], cond.expr, [inc.expr], stmt.expr)}
+		| {while} while lparen [cond]:expr rparen [stmt]:matched_if_stmt                                                           {-> New expr.while(cond.expr, stmt.expr)}
+		| {simple} unconditional_stmt                                                                                              {-> unconditional_stmt.expr};
+	unconditional_stmt {-> expr}
+		= {vars} var_list_def semi                                                                                                 {-> New expr.def(var_list_def.def)}
+		| {fun_decl} fun_decl semi                                                                                                 {-> New expr.decl(fun_decl.decl)}
+		| {fun} fun_def                                                                                                            {-> New expr.def(fun_def.def)}
+		| {expr} expr semi                                                                                                         {-> expr.expr}
+		| {return} return expr semi                                                                                                {-> New expr.return(expr.expr)}
+		| {break} break semi                                                                                                       {-> New expr.break()}
+		| {try} try lbrace stmt* rbrace catch_block+                                                                               {-> New expr.try([New expr.seq([stmt.expr])], [catch_block.catch_block])}
+		| {block} lbrace stmt* rbrace                                                                                              {-> New expr.seq([stmt.expr])}
+		| {empty} semi                                                                                                             {-> New expr.none()};
+	catch_block {-> catch_block}
+		= catch lparen [type]:id [var]:id rparen lbrace stmt* rbrace                                                               {-> New catch_block(type, var, [stmt.expr])};
+
+
+Abstract Syntax Tree
+	expr 
+		= {none}
+		| {null}
+		| {bool} bool
+		| {char} char
+		| {number} number
+		| {string} string
+		| {var} id
+		| {uarithop} expr [op]:uarithop
+		| {unop} expr [op]:unop
+		| {binop} [left]:expr [op]:binop [right]:expr
+		| {boolop} [left]:expr [op]:boolop [right]:expr
+		| {subscript} expr [index]:expr
+		| {project} expr [member]:id
+		| {apply} expr [args]:expr*
+		| {assign} [left]:expr [op]:binop [right]:expr
+		| {if} [cond]:expr [then]:expr [else]:expr
+		| {for} [init]:expr* [cond]:expr? [inc]:expr* expr
+		| {while} [cond]:expr expr
+		| {seq} expr*
+		| {return} expr
+		| {break}
+		| {new_const} id [args]:expr*
+		| {new_array} [type]:type [dims]:expr*
+		| {instanceof} [left]:expr [right]:expr
+		| {try} expr* catch_block+ 
+		| {decl} decl
+		| {def} def;
+	decl 
+		= {var} type id [dims]:expr*
+		| {fun} id [return]:type [formals]:decl*;
+	def
+		= {var} type id [dims]:expr* expr?
+		| {vars} type [vars]:var_and_init+
+		| {array} def
+		| {fun} id [formals]:decl* [return]:type expr*
+		| {const} id [formals]:decl* expr*
+		| {class} id [extends]:type? [implements]:type* def*
+		| {type} type;
+	type = {void} | {boolean} | {int} | {float} | {char} | {string} | {id} id | {array} type [dims]:expr+ | {fun} id [return]:type [args]:type* | {interface} id [members]:decl*;
+	bool = {true} | {false};
+	number = {decimal} integer | {octal} octal | {hex} hex | {float} float;
+	uarithop = {pre_dec} | {pre_inc} | {post_dec} | {post_inc};
+	unop = {neg} | {not};
+	binop = {plus} | {minus} | {times} | {divide} | {mod} | {eq} | {neq} | {lt} | {gt} | {le} | {ge} | {none};
+	boolop = {and} | {or};
+	var_and_init = id [dims]:expr* expr?;
+	catch_block = [type]:id [var]:id expr*;

@@ -260,13 +260,14 @@ public class TestParser {
 	private void assertContainsSingleClassOrInterface(final Node s, final String name) {
 		s.apply(new DepthFirstAdapter() {
 			boolean found = false;
-			@Override public void inAClassClassOrInterfaceDef(AClassClassOrInterfaceDef node) { found(); }
-			@Override public void inAInterfaceClassOrInterfaceDef(AInterfaceClassOrInterfaceDef node) { found(); }
-			private void found() {
+			@Override public void inAClassDef(AClassDef node) {
 				assertFalse(found, "Should only find 1 class/interface");
 				found = true;
+				assertEquals(node.getId().getText(), name);
 			}
-			@Override public void inAClassDef(AClassDef node) {
+			@Override public void inAInterfaceType(AInterfaceType node) {
+				assertFalse(found, "Should only find 1 class/interface");
+				found = true;
 				assertEquals(node.getId().getText(), name);
 			}
 			@Override public void outStart(Start node) {
@@ -278,21 +279,47 @@ public class TestParser {
 		s.apply(new DepthFirstAdapter() {
 			int paramListDepth = 0;
 			boolean found = false;
-			@Override public void inAMemberDecl(AMemberDecl node) { inMember(node); }
-			@Override public void inAFunDef(AFunDef node) { inMember(node); }
-			public void inMember(Node node) {
-				node.apply(new DepthFirstAdapter() {
-					@Override public void inAFunIdAndParams(AFunIdAndParams node) {
-						if (paramListDepth == 0 && name.equals(node.getId().getText())) { found = true; }
-					}
-					@Override public void inASingleParamDeclList(ASingleParamDeclList node) { paramListDepth++; }
-					@Override public void inAMultiParamDeclList(AMultiParamDeclList node) { paramListDepth++; }
-					@Override public void outASingleParamDeclList(ASingleParamDeclList node) { paramListDepth--; }
-					@Override public void outAMultiParamDeclList(AMultiParamDeclList node) { paramListDepth--; }
-				});
+			@Override public void inAFunDecl(AFunDecl node) {
+				if (name.equals(node.getId().getText())) { found = true; }
 			}
-			@Override public void outAClassClassOrInterfaceDef(AClassClassOrInterfaceDef node) { assertTrue(found, "Method " + name + " not found."); }
-			@Override public void outAInterfaceClassOrInterfaceDef(AInterfaceClassOrInterfaceDef node) { assertTrue(found, "Method " + name + " not found."); }
+			@Override public void inAFunDef(AFunDef node) {
+				if (name.equals(node.getId().getText())) { found = true; }
+			}
+			@Override public void outStart(Start node) {
+				assertTrue(found, "Method " + name + " not found.");
+			}
+		});
+	}
+	
+	private void assertSiblingNodeEquals(final Node s, final String nodeValue, final String siblingValue, String message) {
+		s.apply(new DepthFirstAdapter() {
+			@Override public void defaultIn(Node node) {
+			}
+		});
+	}
+
+	private void assertSiblingNodeEquals(final Node s, final String nodeValue, final String value) {
+		assertSiblingNodeEquals(s, value, null);
+	}
+	
+	private void print(Node s) {
+		s.apply(new DepthFirstAdapter() {
+			int indent = 0;
+			void print(Node n) {
+				StringBuilder s = new StringBuilder();
+				for (int i = 0; i < indent; i++) {
+					s.append("  ");
+				}
+				s.append(n.getClass().toString().replace("class appel.ch03.node.A", "")).append(" (").append(n.toString()).append(")");
+				System.out.println(s.toString());
+			}
+			@Override public void defaultIn(Node node) {
+				print(node);
+				indent++;
+			}
+			@Override public void defaultOut(Node node) {
+				indent--;
+			}
 		});
 	}
 	
@@ -306,7 +333,7 @@ public class TestParser {
 		public String getMessage() {
 			String indent = "       ";
 			StringBuilder s = new StringBuilder("\n").append(indent).append(e.getMessage()).append(":\n");
-			s.append(indent).append("1        10        20        30        40        50        60        70\n");
+			s.append(indent).append("1   .    10   .    20   .    30   .    40   .    50   .    60   .    70   .\n");
 			if (e instanceof ParserException) {
 				int col = Integer.parseInt(e.getMessage().split("\\[|\\]|,")[2]);
 				s.append(indent);
@@ -322,7 +349,7 @@ public class TestParser {
 			}
 			return s.toString();
 		}
-		@Override public void apply(Switch sw) {}
-		@Override public Object clone() { return null; }
+		@Override public void apply(Switch sw) { throw new UnsupportedOperationException(); }
+		@Override public Object clone() { throw new UnsupportedOperationException(); }
 	}
 }

@@ -27,7 +27,7 @@ public class TestLexer {
 		testTokens("try catch finally throw finally", TTry.class, TCatch.class, TFinally.class, TThrow.class, TFinally.class);
 		testTokens("new interface class extends implements this instanceof", TNew.class, TInterface.class, TClasskeyword.class, TExtends.class, TImplements.class, TThis.class, TInstanceof.class);
 		testTokens("return true false null", TReturn.class, TTrue.class, TFalse.class, TNull.class);
-		testTokens("void int boolean String", TVoid.class, TInt.class, TBoolean.class, TStringtype.class);
+		testTokens("void int boolean String", TVoid.class, TTypeInt.class, TTypeBoolean.class, TTypeString.class);
 	}
 	
 	public void numbers() {
