@@ -230,13 +230,22 @@ Productions
 	// -------------------------------------------------------
 	// Statements
 	// -------------------------------------------------------
-	stmt =
+	stmt = 
+		{if_then} if lparen expr rparen [then_stmt]:stmt |
+		{if_then_else} if lparen expr rparen [then_stmt]:matched_if_stmt else [else_stmt]:stmt |
+		{for} for lparen [init]:arg_list? [semi1]:semi [cond]:expr? [semi2]:semi [inc]:arg_list? rparen stmt |
+		{while} while lparen expr rparen stmt |
+		{simple} simple_stmt;
+	matched_if_stmt = 
+		{if_then_else} if lparen expr rparen [then_stmt]:matched_if_stmt else [else_stmt]:matched_if_stmt |
+		{for} for lparen [init]:arg_list? [semi1]:semi [cond]:expr? [semi2]:semi [inc]:arg_list? rparen [stmt]:matched_if_stmt |
+		{while} while lparen expr rparen [stmt]:matched_if_stmt |
+		{simple} simple_stmt;
+	simple_stmt =
 		{var} var_defs |
 		{fun_decl} fun_decl semi |
 		{fun} fun_def semi |
 		{expr} expr semi |
-		{for} for lparen [init]:arg_list? [semi1]:semi [cond]:expr? [semi2]:semi [inc]:arg_list? rparen stmt |
-		{while} while lparen expr rparen stmt |
 		{return} return expr semi |
 		{break} break semi |
 		{try} try lbrace stmt* rbrace catchblock+ |

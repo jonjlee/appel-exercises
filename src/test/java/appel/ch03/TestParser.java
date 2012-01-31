@@ -200,7 +200,22 @@ public class TestParser {
 		assertInvalid(parseStmt("try {} catch () {}"));
 		assertInvalid(parseStmt("try catch (Exception e) {}"));
 	}
+	
+	public void ifStmt() {
+		assertValid(parseStmt("if (true);"));
+		assertValid(parseStmt("if (true) {} else {}"));
+		assertValid(parseStmt("if (true) ; else ;"));
+	}
 
+	public void nestedIfStmt() {
+		assertValid(parseStmt("if (true) if (true) {} else {}"));
+		assertValid(parseStmt("if (true) if (true) {} else {} else {}"));
+	}
+
+	public void elseIfStmt() {
+		assertValid(parseStmt("if (true) {} else if (true) {}"));
+		assertValid(parseStmt("if (true) {} else if (true) {} else {}"));
+	}
 
 	private Node parse(String input) {
 		try {
