@@ -37,9 +37,9 @@ Tokens
 	integer = '0' | nonzero;
 	octal = '0' ['0'..'7']*;
 	hex = '0x' [digit + [['a'..'f'] + ['A'..'F']]]+;
-	float = 
-		(digit+ '.' digit* exponent? ) | 
-		(digit* '.' digit+ exponent? )
+	float
+		= (digit+ '.' digit* exponent? )
+		| (digit* '.' digit+ exponent? )
 		| (digit+ exponent);
 	
 	// Strings
@@ -51,8 +51,8 @@ Tokens
 
 	// Whitespace/comments
 	whitespace = (' ' | '\t' | eol)+;
-	comment = 
-		('//' [any - [10 + 13]]* eol?)
+	comment
+		= ('//' [any - [10 + 13]]* eol?)
 		| ('/*' nonstar* (star+ [any - '/'] nonstar*)* star* '*/');
 
 Ignored Tokens
@@ -63,7 +63,7 @@ Productions
 	// -------------------------------------------------------
 	// Top-level program (i.e. a .java file)
 	// -------------------------------------------------------
-	prog {-> expr} 
+	prog {-> expr}
 		= class_or_interface_def+                                     {-> New expr.seq([class_or_interface_def.expr])};
 	class_or_interface_def {-> expr}
 		= {class} class_def                                           {-> class_def.expr}
@@ -72,7 +72,7 @@ Productions
 	// -------------------------------------------------------
 	// Classes and interfaces
 	// -------------------------------------------------------
-	interface_def {-> expr} 
+	interface_def {-> expr}
 		= interface id lbrace member_decl* rbrace                     {-> New expr.def(New def.type(New type.interface(id, [member_decl.decl])))};
 	class_def {-> expr}
 		= classkeyword id extends_type? implements_types? lbrace member_def* rbrace
@@ -86,36 +86,54 @@ Productions
 	// Declarations
 	// -------------------------------------------------------
 	member_decl {-> decl}
-		= fun_decl semi                                               {-> fun_decl.decl};
-	fun_type_spec {-> type}
-		= {void} void                                                 {-> New type.void()}
-		| {non_void} var_type_spec                                    {-> var_type_spec.type};
-	fun_decl {-> decl} 
-		= fun_type_spec id fun_params                                 {-> New decl.fun(id, fun_type_spec.type, [fun_params.decl])};
-	fun_params {-> decl*}
-	 	= lparen param_decl_list? rparen                               {-> [param_decl_list.decl]};
-	param_decl_list {-> decl*}
-		= {single} param_decl                                         {-> [param_decl.decl]}
-		| {multi} param_decl comma param_decl_list                    {-> [param_decl.decl, param_decl_list.decl]};
-	param_decl {-> decl}
-		= {fun} fun_decl                                              {-> fun_decl.decl}
-		| {var} var_decl                                              {-> var_decl.decl};
-	var_type {-> type}
-		= {int} type_int                                              {-> New type.int()}
-		| {float} type_float                                          {-> New type.float()}
-		| {bool} type_boolean                                         {-> New type.boolean()}
-		| {char} type_char                                            {-> New type.char()}
-		| {string} type_string                                        {-> New type.string()}
-		| {class} id                                                  {-> New type.id(id)};
+		= fun_decl semi                                                             {-> fun_decl.decl};
+
+	// Function declaration, e.g. void f(int g, void h(int))
+	fun_decl {-> decl} = fun_return_type_spec id lparen fun_formals? rparen         {-> New decl.fun(id, fun_return_type_spec.type, [fun_formals.formal])};
+
+	// Function parameters (formals) are a list of _named_ variables and functions,
+	// e.g. "int g, void h(int)"
+	fun_formals {-> formal*}
+		= {single} fun_formal                                                       {-> [fun_formal.formal]}
+		| {multi} fun_formal comma fun_formals                                      {-> [fun_formal.formal, fun_formals.formal]};
+	fun_formal {-> formal}
+		= {fun} fun_return_type_spec id lparen fun_type_params? rparen              {-> New formal.fun(id, fun_return_type_spec.type, [fun_type_params.type])}
+		| {var} var_type_spec id array_dimension*                                   {-> New formal.var_or_array(var_type_spec.type, id, [array_dimension.expr])};
+
+	// Variable type and function return type specifications. Variable types can be
+	// suffixed with empty array dimensions, e.g. int[] a. Functions return void.
+	fun_return_type_spec {-> type}
+		= {void} void                                                               {-> New type.void()}
+		| {non_void} var_type_spec                                                  {-> var_type_spec.type};
 	var_type_spec {-> type}
-		= {single} var_type                                           {-> var_type.type}
-		| {array} var_type array_dimension+                           {-> New type.array_with_size(var_type.type, [array_dimension.expr])};
-	var_decl {-> decl}
-		= var_type_spec id array_dimension*                           {-> New decl.var_or_array(var_type_spec.type, id, [array_dimension.expr])};
-	array_dimension {-> expr} = lbrack rbrack                         {-> New expr.none()};
+		= {single} var_type                                                         {-> var_type.type}
+		| {array} var_type array_dimension+                                         {-> New type.array_with_size(var_type.type, [array_dimension.expr])};
+	array_dimension {-> expr} = lbrack rbrack                                       {-> New expr.none()};
+
+	// A variable of type function may have parameters. These parameters are _not_
+	// named (like formals) and if the parameter is also of type function, it is
+	// not surrounded by parens (like var_type), e.g. "void(int)"
+	fun_type_params {-> type*}
+		= {single} fun_type_param                                                   {-> [fun_type_param.type]}
+		| {multi} fun_type_param comma fun_type_params                              {-> [fun_type_param.type, fun_type_params.type]};
+	fun_type_param {-> type}
+		= {fun} fun_return_type_spec lparen fun_type_params? rparen                 {-> New type.fun(fun_return_type_spec.type, [fun_type_params.type])}
+		| {var} var_type_spec                                                       {-> var_type_spec.type};
+
+	// Non-array variable types. These can include function types which are function
+	// signatures surrounded by parens, e.g. "(void(int))"
+	var_type {-> type}
+		= {int} type_int                                                            {-> New type.int()}
+		| {float} type_float                                                        {-> New type.float()}
+		| {bool} type_boolean                                                       {-> New type.boolean()}
+		| {char} type_char                                                          {-> New type.char()}
+		| {string} type_string                                                      {-> New type.string()}
+		| {class} id                                                                {-> New type.id(id)}
+		| {fun} [lp1]:lparen fun_return_type_spec id [lp2]:lparen fun_type_params? [rp2]:rparen [rp1]:rparen
+		                                                                            {-> New type.fun(fun_return_type_spec.type, [fun_type_params.type])};
 
 	// -------------------------------------------------------
-	// Definitions 
+	// Definitions
 	// -------------------------------------------------------
 	member_def {-> def}
 		= {vars} var_list_def semi                                                  {-> var_list_def.def}
@@ -129,9 +147,9 @@ Productions
 	var_init {-> expr}
 		= eq expr                                                                   {-> expr.expr};
 	fun_def {-> def}
-		= fun_type_spec id fun_params lbrace stmt* rbrace                           {-> New def.fun(id, [fun_params.decl], fun_type_spec.type, [stmt.expr])};
+		= fun_return_type_spec id lparen fun_formals? rparen lbrace stmt* rbrace    {-> New def.fun(id, fun_return_type_spec.type, [fun_formals.formal], [stmt.expr])};
 	constructor_def {-> def}
-	 	= id fun_params lbrace stmt* rbrace                                         {-> New def.const(id, [fun_params.decl], [stmt.expr])};
+	 	= id lparen fun_formals? rparen lbrace stmt* rbrace                         {-> New def.const(id, [fun_formals.formal], [stmt.expr])};
 	
 	// -------------------------------------------------------
 	// Expressions (ordered by precedence)
@@ -157,9 +175,9 @@ Productions
 		= {times} [left]:mult_expr times [right]:post_unary_expr      {-> New expr.binop(left.expr, New binop.times(), right.expr)}
 		| {divide} [left]:mult_expr divide [right]:post_unary_expr    {-> New expr.binop(left.expr, New binop.divide(), right.expr)}
 		| {mod} [left]:mult_expr mod [right]:post_unary_expr          {-> New expr.binop(left.expr, New binop.mod(), right.expr)}
-		| {simple} [expr]:post_unary_expr                             {-> expr.expr};        
-	// 4. +, -                                                          
-	add_expr {-> expr}                                                      
+		| {simple} [expr]:post_unary_expr                             {-> expr.expr};
+	// 4. +, -
+	add_expr {-> expr}
 		= {plus} [left]:add_expr plus [right]:mult_expr               {-> New expr.binop(left.expr, New binop.plus(), right.expr)}
 		| {minus} [left]:add_expr minus [right]:mult_expr             {-> New expr.binop(left.expr, New binop.minus(), right.expr)}
 		| {simple} [expr]:mult_expr                                   {-> expr.expr};
@@ -174,19 +192,19 @@ Productions
 	instanceof_expr {-> expr}
 		= [left]:instanceof_expr instanceof [right]:ineq_expr         {-> New expr.instanceof(left.expr, right.expr)}
 		| {simple} [expr]:ineq_expr                                   {-> expr.expr};
-	// 7. ==, !=                                                
+	// 7. ==, !=
 	eq_expr {-> expr}
 		= {eq} [left]:eq_expr eqeq [right]:instanceof_expr            {-> New expr.binop(left.expr, New binop.eq(), right.expr)}
 		| {neq} [left]:eq_expr neq [right]:instanceof_expr            {-> New expr.binop(left.expr, New binop.neq(), right.expr)}
-		| {simple} [expr]:instanceof_expr                             {-> expr.expr};        
-	// 8. &&                                                            
+		| {simple} [expr]:instanceof_expr                             {-> expr.expr};
+	// 8. &&
 	and_expr {-> expr}
 		= [left]:and_expr andand [right]:eq_expr                      {-> New expr.boolop(left.expr, New boolop.and(), right.expr)}
-		| {simple} [expr]:eq_expr                                     {-> expr.expr};        
-	// 9. ||                                                            
+		| {simple} [expr]:eq_expr                                     {-> expr.expr};
+	// 9. ||
 	or_expr {-> expr}
 		= [left]:or_expr oror [right]:and_expr                        {-> New expr.boolop(left.expr, New boolop.or(), right.expr)}
-		| {simple} [expr]:and_expr                                    {-> expr.expr}; 
+		| {simple} [expr]:and_expr                                    {-> expr.expr};
 	// 10. assignment
 	expr {-> expr}
 		= {assign} [left]:expr eq [right]:or_expr                     {-> New expr.assign(left.expr, New binop.none(), right.expr)}
@@ -277,7 +295,7 @@ Productions
 
 
 Abstract Syntax Tree
-	expr 
+	expr
 		= {none}
 		| {null}
 		| {bool} bool
@@ -302,26 +320,30 @@ Abstract Syntax Tree
 		| {new_const} id [args]:expr*
 		| {new_array} [type]:type [dims]:expr*
 		| {instanceof} [left]:expr [right]:expr
-		| {try} expr* catch_block+ 
+		| {try} expr* catch_block+
 		| {decl} decl
 		| {def} def;
-	decl 
+	decl
 		= {var_or_array} type id [dims]:expr*        // ASTCleaner replaces AVarOrArrayDecl with AVarDecl
 		| {var} type id
-		| {fun} id [return]:type [formals]:decl*;
+		| {fun} id [return]:type formal*;
 	def
 		= {var_or_array} type id [dims]:expr* expr?  // ASTCleaner replaces AVarOrArrayDef with AVarDef
 		| {vars_or_arrays} type [vars]:var_and_init+ // ASTCleaner replaces AVarsDef with AVarsDef([AVarDef])
 		| {var} type id expr?
 		| {vars} def*
-		| {fun} id [formals]:decl* [return]:type expr*
-		| {const} id [formals]:decl* expr*
+		| {fun} id [return]:type formal* expr*
+		| {const} id formal* expr*
 		| {class} id [extends]:type? [implements]:type* def*
 		| {type} type;
-	type 
+	formal
+		= {var_or_array} type id [dims]:expr*
+		| {var} type id
+		| {fun} id [return]:type [args]:type*;
+	type
 		= {void} | {boolean} | {int} | {float} | {char} | {string} | {id} id | {array} type
 		| {array_with_size} type [dims]:expr+        // ASTCleaner replaces AArrayWithSizeType with AArrayType
-		| {fun} id [return]:type [args]:type*
+		| {fun} [return]:type [args]:type*
 		| {interface} id [members]:decl*;
 	bool = {true} | {false};
 	number = {decimal} integer | {octal} octal | {hex} hex | {float} float;

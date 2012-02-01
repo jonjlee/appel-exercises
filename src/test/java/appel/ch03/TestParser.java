@@ -35,7 +35,7 @@ public class TestParser {
 		assertInvalid(s, 1, 1, 20, 30);
 	}
 	public void interfaceDeclWithFunParams() {
-		Node result = parse("interface MainProgram { int M(X x, Y y(A a, int b)); }");
+		Node result = parse("interface MainProgram { int M(X x, Y y(A, int)); }");
 		assertValid(result);
 	}
 	public void interfaceWithManyMethods() {
@@ -43,7 +43,7 @@ public class TestParser {
 				"interface MainProgram {\n" +
 				"  int x();\n" +
 				"  String y(String[] params);\n" +
-				"  int z(boolean a, int b, AnotherClass c(int[] param));\n" +
+				"  int z(boolean a, int b, AnotherClass c(int[]));\n" +
 				"}");
 		assertValid(s);
 		assertContainsSingleClassOrInterface(s, "MainProgram");
@@ -84,7 +84,7 @@ public class TestParser {
 				"  \n" +
 				"  int x() { int a = 0e-10; }\n" +
 				"  String y(String[] params) { String[] s = params; }\n" +
-				"  int z(boolean a, int b, AnotherClass c(int[] param)) {\n" +
+				"  int z(boolean a, int b, AnotherClass c(int[])) {\n" +
 				"  }\n" +
 				"}");
 		assertValid(s);
@@ -104,7 +104,9 @@ public class TestParser {
 		assertValid(parseStmt("void x()"));
 		assertValid(parseStmt("int x()"));
 		assertValid(parseStmt("String x() { x(); }"));
-		assertValid(parseStmt("int x(boolean y, void z(int a)) {}"));
+		assertValid(parseStmt("int x(boolean y, void z(int)) {}"));
+		assertValid(parseStmt("int x(boolean y, void z(int(int,void()))) {}"));
+		assertValid(parseStmt("(int f(void())) x(boolean y, void z())"));
 	}
 
 	public void voidVarTypeIsInvalid() {
