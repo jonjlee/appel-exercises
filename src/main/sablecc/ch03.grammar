@@ -207,8 +207,8 @@ Productions
 		| {simple} [expr]:and_expr                                    {-> expr.expr};
 	// 10. assignment
 	expr {-> expr}
-		= {assign} [left]:expr eq [right]:or_expr                     {-> New expr.assign(left.expr, New binop.none(), right.expr)}
-		| {binop_assign} [left]:expr [op]:binop_eq [right]:or_expr    {-> New expr.assign(left.expr, op.binop, right.expr)}
+		= {assign} [left]:or_expr eq [right]:expr                     {-> New expr.assign(left.expr, New binop.none(), right.expr)}
+		| {binop_assign} [left]:or_expr [op]:binop_eq [right]:expr    {-> New expr.assign(left.expr, op.binop, right.expr)}
 		| {simple} [expr]:or_expr                                     {-> expr.expr};
 
 	// Expression helpers

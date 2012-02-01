@@ -106,7 +106,7 @@ public class TestParser {
 		assertValid(parseStmt("String x() { x(); }"));
 		assertValid(parseStmt("int x(boolean y, void z(int)) {}"));
 		assertValid(parseStmt("int x(boolean y, void z(int(int,void()))) {}"));
-		assertValid(parseStmt("(int f(void())) x(boolean y, void z())"));
+		assertValid(parseStmt("(A x(void())) x(boolean y, void z())"));
 	}
 
 	public void voidVarTypeIsInvalid() {
