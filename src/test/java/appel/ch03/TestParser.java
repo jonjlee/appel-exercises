@@ -308,7 +308,7 @@ public class TestParser {
 			void print(Node n) {
 				StringBuilder s = new StringBuilder();
 				for (int i = 0; i < indent; i++) {
-					s.append("  ");
+					s.append("|  ");
 				}
 				s.append(n.getClass().toString().replace("class appel.ch03.node.A", "")).append(" (").append(n.toString()).append(")");
 				System.out.println(s.toString());

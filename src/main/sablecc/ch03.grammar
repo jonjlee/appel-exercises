@@ -109,9 +109,9 @@ Productions
 		| {class} id                                                  {-> New type.id(id)};
 	var_type_spec {-> type}
 		= {single} var_type                                           {-> var_type.type}
-		| {array} var_type array_dimension+                           {-> New type.array(var_type.type, [array_dimension.expr])};
+		| {array} var_type array_dimension+                           {-> New type.array_with_size(var_type.type, [array_dimension.expr])};
 	var_decl {-> decl}
-		= var_type_spec id array_dimension*                           {-> New decl.var(var_type_spec.type, id, [array_dimension.expr])};
+		= var_type_spec id array_dimension*                           {-> New decl.var_or_array(var_type_spec.type, id, [array_dimension.expr])};
 	array_dimension {-> expr} = lbrack rbrack                         {-> New expr.none()};
 
 	// -------------------------------------------------------
@@ -122,11 +122,11 @@ Productions
 		| {fun} fun_def                                                             {-> fun_def.def}
 		| {constructor} constructor_def                                             {-> constructor_def.def};
 	var_list_def {-> def}
-		= var_type_spec [vars]:var_list_items                                       {-> New def.vars(var_type_spec.type, [vars.var_and_init])};
+		= var_type_spec [vars]:var_list_items                                       {-> New def.vars_or_arrays(var_type_spec.type, [vars.var_and_init])};
 	var_list_items {-> var_and_init*}
 		= {single} id array_dimension* var_init?                                    {-> [New var_and_init(id, [array_dimension.expr], var_init.expr)]}
 		| {multi} id array_dimension* var_init? comma [rest]:var_list_items         {-> [New var_and_init(id, [array_dimension.expr], var_init.expr), rest.var_and_init]};
-	var_init {->expr}
+	var_init {-> expr}
 		= eq expr                                                                   {-> expr.expr};
 	fun_def {-> def}
 		= fun_type_spec id fun_params lbrace stmt* rbrace                           {-> New def.fun(id, [fun_params.decl], fun_type_spec.type, [stmt.expr])};
@@ -306,17 +306,23 @@ Abstract Syntax Tree
 		| {decl} decl
 		| {def} def;
 	decl 
-		= {var} type id [dims]:expr*
+		= {var_or_array} type id [dims]:expr*        // ASTCleaner replaces AVarOrArrayDecl with AVarDecl
+		| {var} type id
 		| {fun} id [return]:type [formals]:decl*;
 	def
-		= {var} type id [dims]:expr* expr?
-		| {vars} type [vars]:var_and_init+
-		| {array} def
+		= {var_or_array} type id [dims]:expr* expr?  // ASTCleaner replaces AVarOrArrayDef with AVarDef
+		| {vars_or_arrays} type [vars]:var_and_init+ // ASTCleaner replaces AVarsDef with AVarsDef([AVarDef])
+		| {var} type id expr?
+		| {vars} def*
 		| {fun} id [formals]:decl* [return]:type expr*
 		| {const} id [formals]:decl* expr*
 		| {class} id [extends]:type? [implements]:type* def*
 		| {type} type;
-	type = {void} | {boolean} | {int} | {float} | {char} | {string} | {id} id | {array} type [dims]:expr+ | {fun} id [return]:type [args]:type* | {interface} id [members]:decl*;
+	type 
+		= {void} | {boolean} | {int} | {float} | {char} | {string} | {id} id | {array} type
+		| {array_with_size} type [dims]:expr+        // ASTCleaner replaces AArrayWithSizeType with AArrayType
+		| {fun} id [return]:type [args]:type*
+		| {interface} id [members]:decl*;
 	bool = {true} | {false};
 	number = {decimal} integer | {octal} octal | {hex} hex | {float} float;
 	uarithop = {pre_dec} | {pre_inc} | {post_dec} | {post_inc};
