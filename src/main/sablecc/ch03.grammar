@@ -332,7 +332,7 @@ Abstract Syntax Tree
 		| {class} id [extends]:type? [implements]:type* def*
 		| {type} type;
 	formal
-		= {var_or_array} type id [dims]:expr*
+		= {var_or_array} type id [dims]:expr*        // ASTCleaner replaces AVarsDef with AVarsDef([AVarDef])
 		| {var} type id
 		| {fun} id [return]:type [args]:type*;
 	type

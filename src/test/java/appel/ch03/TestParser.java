@@ -2,19 +2,24 @@ package appel.ch03;
 
 import static org.testng.Assert.*;
 
+import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.StringReader;
 
 import org.testng.annotations.Test;
+import org.testng.log4testng.Logger;
 
 import appel.ch03.analysis.DepthFirstAdapter;
 import appel.ch03.lexer.Lexer;
+import appel.ch03.lexer.LexerException;
 import appel.ch03.node.*;
 import appel.ch03.parser.Parser;
 import appel.ch03.parser.ParserException;
 
 @Test
 public class TestParser {
+	
+	private static Logger LOG = Logger.getLogger(TestParser.class);
 
 	public void emptyInterfaceDecl() {
 		Node s = parse("interface MainProgram { }");
@@ -106,7 +111,11 @@ public class TestParser {
 		assertValid(parseStmt("String x() { x(); }"));
 		assertValid(parseStmt("int x(boolean y, void z(int)) {}"));
 		assertValid(parseStmt("int x(boolean y, void z(int(int,void()))) {}"));
-		assertValid(parseStmt("(A r(void())) x(boolean y, void z())"));
+
+		assertValid(parseStmt("int[] x()"));
+		assertInvalid(parseStmt("int x()[]"));
+
+		assertValid(parseStmt("(A r(void()))[] x(boolean y, void z())"));
 	}
 
 	public void voidVarTypeIsInvalid() {
@@ -128,6 +137,37 @@ public class TestParser {
 	public void binopExpr() {
 		assertValid(parseStmt("1 + 2"));
 		assertValid(parseStmt("a + b / 2 * c / (d % e && true || false)"));
+	}
+	
+	public void binopPrecedence() throws ParserException, LexerException, IOException {
+		assertEquals(ExprEvaluator.evalInt("1+2"), 3);
+		assertEquals(ExprEvaluator.evalInt("1+2*2"), 5);
+		assertEquals(ExprEvaluator.evalInt("(1+2)*2"), 6);
+		assertEquals(ExprEvaluator.evalInt("1+-2"), -1);
+		assertEquals(ExprEvaluator.evalInt("-1+2"), 1);
+		
+		assertEquals(ExprEvaluator.evalInt("2+2--"), 4);
+		assertEquals(ExprEvaluator.evalInt("2+--2"), 3);
+
+		assertEquals(ExprEvaluator.evalBool("1+2==3"), true);
+		assertEquals(ExprEvaluator.evalBool("1+2==2"), false);
+		assertEquals(ExprEvaluator.evalBool("1+2<=2"), false);
+
+
+		assertEquals(ExprEvaluator.evalBool("true == true"), true);
+		assertEquals(ExprEvaluator.evalBool("true || false && false"), true);
+		assertEquals(ExprEvaluator.evalBool("(false || true) && false"), false);
+		
+		assertEquals(ExprEvaluator.evalBool("!true"), false);
+		assertEquals(ExprEvaluator.evalBool("!true || true"), true);
+		assertEquals(ExprEvaluator.evalBool("!(true || true)"), false);
+
+		assertEquals(ExprEvaluator.evalBool("1+2<=2 || true"), true);
+	}
+	
+	public void binopAssociativity() throws ParserException, LexerException, IOException {
+		assertEquals(ExprEvaluator.evalInt("1-2-3"), -4);
+		assertEquals(ExprEvaluator.evalInt("1-(2-3)"), 2);
 	}
 
 	public void unopExpr() {
@@ -223,7 +263,9 @@ public class TestParser {
 		try {
 			Lexer l = new Lexer(new PushbackReader(new StringReader(input)));
 			Parser p = new Parser(l);
-			return p.parse();
+			Start s = p.parse();
+			s.apply(new ASTCleaner());
+			return s;
 		} catch (Exception e) {
 			return new ParseFailed(input, e);
 		}
@@ -231,7 +273,12 @@ public class TestParser {
 	
 	private Node parseStmt(String stmt) {
 		//            1        10        20
-		return parse("class X{ void x(){ " + stmt + ";}}");
+		Node s = parse("class _{void _(){  " + stmt + ";}}");
+		if (!(s instanceof ParseFailed)) {
+			LOG.debug(stmt + " ->\n" +
+					nodeToString(((AFunDef) ((AClassDef) ((ADefExpr) ((ASeqExpr) ((Start) s).getPExpr()).getExpr().get(0)).getDef()).getDef().get(0)).getExpr().get(0)));
+		}
+		return s;
 	}
 
 	private void assertValid(Node parseResult) {
@@ -280,9 +327,6 @@ public class TestParser {
 	private void assertMethodExists(final Node s, final String name) {
 		s.apply(new DepthFirstAdapter() {
 			boolean found = false;
-			@Override public void inAFunDecl(AFunDecl node) {
-				if (name.equals(node.getId().getText())) { found = true; }
-			}
 			@Override public void inAFunDef(AFunDef node) {
 				if (name.equals(node.getId().getText())) { found = true; }
 			}
@@ -292,65 +336,40 @@ public class TestParser {
 		});
 	}
 	
-	private void assertSiblingNodeEquals(final Node s, final String nodeValue, final String siblingValue, String message) {
-		s.apply(new DepthFirstAdapter() {
-			@Override public void defaultIn(Node node) {
-			}
-		});
-	}
-
-	private void assertSiblingNodeEquals(final Node s, final String nodeValue, final String value) {
-		assertSiblingNodeEquals(s, value, null);
-	}
-	
-	@SuppressWarnings("unused") private void print(Node s) {
+	private String nodeToString(Node s) {
+		final StringBuilder ast = new StringBuilder();
 		s.apply(new DepthFirstAdapter() {
 			int indent = 0;
-			void print(Node n) {
+			void append(Node n) {
 				StringBuilder s = new StringBuilder();
 				for (int i = 0; i < indent; i++) {
 					s.append("|  ");
 				}
-				s.append(n.getClass().toString().replace("class appel.ch03.node.A", "")).append(" (").append(n.toString()).append(")");
-				System.out.println(s.toString());
+				s.append(n.getClass().toString().replaceFirst("class appel.ch03.node.A?", "")).append(getText(n));
+				ast.append(s).append("\n");
+			}
+			String getText(Node n) {
+				String s = null;
+				if (n instanceof ANumberExpr || n instanceof ABoolExpr || n instanceof ACharExpr || n instanceof AStringExpr || n instanceof AVarExpr) {
+					s = n.toString();
+				} else if (n instanceof AClassDef) {
+					s = ((AClassDef) n).getId().toString();
+				} else if (n instanceof AFunDef) {
+					s = ((AFunDef) n).getId().toString().trim() + "(" + ((AFunDef) n).getFormal().toString() + ")";
+				}
+				if (s != null) {
+					return "(" + s.trim() + ")";
+				}
+				return "";
 			}
 			@Override public void defaultIn(Node node) {
-				print(node);
+				append(node);
 				indent++;
 			}
 			@Override public void defaultOut(Node node) {
 				indent--;
 			}
 		});
-	}
-	
-	class ParseFailed extends Token {
-		String input;
-		Exception e;
-		public ParseFailed(String input, Exception e) {
-			this.input = input;
-			this.e = e;
-		}
-		public String getMessage() {
-			String indent = "       ";
-			StringBuilder s = new StringBuilder("\n").append(indent).append(e.getMessage()).append(":\n");
-			s.append(indent).append("1   .    10   .    20   .    30   .    40   .    50   .    60   .    70   .\n");
-			if (e instanceof ParserException) {
-				int col = Integer.parseInt(e.getMessage().split("\\[|\\]|,")[2]);
-				s.append(indent);
-				for (int i = 0; i < col-1; i++) {
-					s.append(" ");
-				}
-				s.append("v\n");
-			}
-
-			String[] lines = input.split("\n");
-			for (int i = 0; i < lines.length; i++) {
-				s.append(indent.substring(3)).append(i+1).append(": ").append(lines[i]).append('\n');
-			}
-			return s.toString();
-		}
-		@Override public void apply(Switch sw) { throw new UnsupportedOperationException(); }
-		@Override public Object clone() { throw new UnsupportedOperationException(); }
+		return ast.toString();
 	}
 }

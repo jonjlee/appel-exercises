@@ -7,12 +7,6 @@ import appel.ch03.analysis.DepthFirstAdapter;
 import appel.ch03.node.*;
 
 public class ASTCleaner extends DepthFirstAdapter {
-	@Override public void outAVarOrArrayDecl(AVarOrArrayDecl node) {
-		int dimensions = getDimensions(node.getDims());
-		if (dimensions > 0) {
-			node.replaceBy(new AVarDecl(convertToArray(node.getType(), dimensions), node.getId()));
-		}
-	}
 	@Override public void outAVarOrArrayDef(AVarOrArrayDef node) {
 		int dimensions = getDimensions(node.getDims());
 		if (dimensions > 0) {
@@ -28,6 +22,12 @@ public class ASTCleaner extends DepthFirstAdapter {
 		node.replaceBy(new AVarsDef(defs));
 	}
 	@Override public void outAArrayWithSizeType(AArrayWithSizeType node) {
+		int dimensions = getDimensions(node.getDims());
+		if (dimensions > 0) {
+			node.replaceBy(convertToArray(node.getType(), dimensions));
+		}
+	}
+	@Override public void outAVarOrArrayFormal(AVarOrArrayFormal node) {
 		int dimensions = getDimensions(node.getDims());
 		if (dimensions > 0) {
 			node.replaceBy(convertToArray(node.getType(), dimensions));
