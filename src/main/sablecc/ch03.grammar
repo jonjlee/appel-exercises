@@ -73,7 +73,7 @@ Productions
 	// Classes and interfaces
 	// -------------------------------------------------------
 	interface_def {-> expr}
-		= interface id lbrace member_decl* rbrace                     {-> New expr.def(New def.type(New type.interface(id, [member_decl.decl])))};
+		= interface id lbrace member_decl* rbrace                     {-> New expr.def(New def.type(New type.interface(id, [member_decl.def])))};
 	class_def {-> expr}
 		= classkeyword id extends_type? implements_types? lbrace member_def* rbrace
 		                                                              {-> New expr.def(New def.class(id, extends_type.type, [implements_types.type], [member_def.def]))};
@@ -85,11 +85,11 @@ Productions
 	// -------------------------------------------------------
 	// Declarations
 	// -------------------------------------------------------
-	member_decl {-> decl}
-		= fun_decl semi                                                             {-> fun_decl.decl};
+	member_decl {-> def}
+		= fun_decl semi                                                             {-> fun_decl.def};
 
 	// Function declaration, e.g. void f(int g, void h(int))
-	fun_decl {-> decl} = fun_return_type_spec id lparen fun_formals? rparen         {-> New decl.fun(id, fun_return_type_spec.type, [fun_formals.formal])};
+	fun_decl {-> def} = fun_return_type_spec id lparen fun_formals? rparen         {-> New def.fun(id, fun_return_type_spec.type, [fun_formals.formal], [New expr.none()])};
 
 	// Function parameters (formals) are a list of _named_ variables and functions,
 	// e.g. "int g, void h(int)"
@@ -282,7 +282,7 @@ Productions
 		| {simple} unconditional_stmt                                                                                              {-> unconditional_stmt.expr};
 	unconditional_stmt {-> expr}
 		= {vars} var_list_def semi                                                                                                 {-> New expr.def(var_list_def.def)}
-		| {fun_decl} fun_decl semi                                                                                                 {-> New expr.decl(fun_decl.decl)}
+		| {fun_decl} fun_decl semi                                                                                                 {-> New expr.def(fun_decl.def)}
 		| {fun} fun_def                                                                                                            {-> New expr.def(fun_def.def)}
 		| {expr} expr semi                                                                                                         {-> expr.expr}
 		| {return} return expr semi                                                                                                {-> New expr.return(expr.expr)}
@@ -321,12 +321,7 @@ Abstract Syntax Tree
 		| {new_array} [type]:type [dims]:expr*
 		| {instanceof} [left]:expr [right]:expr
 		| {try} expr* catch_block+
-		| {decl} decl
 		| {def} def;
-	decl
-		= {var_or_array} type id [dims]:expr*        // ASTCleaner replaces AVarOrArrayDecl with AVarDecl
-		| {var} type id
-		| {fun} id [return]:type formal*;
 	def
 		= {var_or_array} type id [dims]:expr* expr?  // ASTCleaner replaces AVarOrArrayDef with AVarDef
 		| {vars_or_arrays} type [vars]:var_and_init+ // ASTCleaner replaces AVarsDef with AVarsDef([AVarDef])
@@ -344,7 +339,7 @@ Abstract Syntax Tree
 		= {void} | {boolean} | {int} | {float} | {char} | {string} | {id} id | {array} type
 		| {array_with_size} type [dims]:expr+        // ASTCleaner replaces AArrayWithSizeType with AArrayType
 		| {fun} [return]:type [args]:type*
-		| {interface} id [members]:decl*;
+		| {interface} id [members]:def*;
 	bool = {true} | {false};
 	number = {decimal} integer | {octal} octal | {hex} hex | {float} float;
 	uarithop = {pre_dec} | {pre_inc} | {post_dec} | {post_inc};

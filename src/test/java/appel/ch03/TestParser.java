@@ -106,7 +106,7 @@ public class TestParser {
 		assertValid(parseStmt("String x() { x(); }"));
 		assertValid(parseStmt("int x(boolean y, void z(int)) {}"));
 		assertValid(parseStmt("int x(boolean y, void z(int(int,void()))) {}"));
-		assertValid(parseStmt("(A x(void())) x(boolean y, void z())"));
+		assertValid(parseStmt("(A r(void())) x(boolean y, void z())"));
 	}
 
 	public void voidVarTypeIsInvalid() {
@@ -279,7 +279,6 @@ public class TestParser {
 	}
 	private void assertMethodExists(final Node s, final String name) {
 		s.apply(new DepthFirstAdapter() {
-			int paramListDepth = 0;
 			boolean found = false;
 			@Override public void inAFunDecl(AFunDecl node) {
 				if (name.equals(node.getId().getText())) { found = true; }
@@ -304,7 +303,7 @@ public class TestParser {
 		assertSiblingNodeEquals(s, value, null);
 	}
 	
-	private void print(Node s) {
+	@SuppressWarnings("unused") private void print(Node s) {
 		s.apply(new DepthFirstAdapter() {
 			int indent = 0;
 			void print(Node n) {
